@@ -1,7 +1,3 @@
-let animationInterval;
-let currentFrameIndex = 0;
-let animationFrames = [];
-
 // 画像のファイル名から連番を抽出するヘルパー関数
 function extractSequenceNumber(filename) {
   const match = filename.match(/_(\d+)\.(png|jpg|jpeg)$/i);
@@ -10,33 +6,14 @@ function extractSequenceNumber(filename) {
 
 // アニメーション開始関数
 function startAnimation() {
-  if (animationFrames.length === 0) {
-    console.warn('アニメーションフレームがありません。');
-    return;
-  }
-
-  if (animationInterval) {
-    clearInterval(animationInterval);
-  }
-
-  animationInterval = setInterval(() => {
-    currentFrameIndex = (currentFrameIndex + 1) % animationFrames.length;
-    document.getElementById('animation-frame').src = animationFrames[currentFrameIndex];
-
-    // バックグラウンドスクリプトに現在のフレームを送信
-    chrome.runtime.sendMessage({ type: 'updateIcon', imageData: animationFrames[currentFrameIndex] });
-
-    chrome.storage.local.set({ currentFrameIndex: currentFrameIndex });
-  }, 100); // 100msごとにフレームを更新
+  chrome.runtime.sendMessage({ type: 'startAnimationBackground' });
+  console.log('アニメーション開始メッセージをバックグラウンドに送信しました。');
 }
 
 // アニメーション停止関数
 function stopAnimation() {
-  if (animationInterval) {
-    clearInterval(animationInterval);
-    animationInterval = null;
-    console.log('アニメーションが停止しました。');
-  }
+  chrome.runtime.sendMessage({ type: 'stopAnimationBackground' });
+  console.log('アニメーション停止メッセージをバックグラウンドに送信しました。');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -68,20 +45,19 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  // chrome.storageから保存されたアニメーションフレームと現在のフレームインデックスをロード
+  // UI表示用にchrome.storageから保存されたアニメーションフレームと現在のフレームインデックスをロード
   chrome.storage.local.get(['animationFrames', 'currentFrameIndex'], (result) => {
-    if (result.animationFrames) {
-      animationFrames = result.animationFrames;
-      currentFrameIndex = result.currentFrameIndex || 0;
-      if (animationFrames.length > 0) {
-        animationFrame.src = animationFrames[currentFrameIndex];
-      }
+    if (result.animationFrames && result.animationFrames.length > 0) {
+      const animationFramesFromStorage = result.animationFrames;
+      const currentFrameIndexFromStorage = result.currentFrameIndex || 0;
+      animationFrame.src = animationFramesFromStorage[currentFrameIndexFromStorage];
     }
   });
 
   // ファイルアップロードの処理
   imageUpload.addEventListener('change', (event) => {
     const files = Array.from(event.target.files);
+    let newAnimationFrames = [];
 
     // ファイルを連番でソート
     files.sort((a, b) => {
@@ -90,22 +66,24 @@ document.addEventListener('DOMContentLoaded', () => {
       return numA - numB; // 昇順にソート
     });
 
-    animationFrames = []; // 新しいアップロードで既存のフレームをクリア
-
     let loadedCount = 0;
     files.forEach(file => {
       const reader = new FileReader();
       reader.onload = (e) => {
-        animationFrames.push(e.target.result);
+        newAnimationFrames.push(e.target.result);
         loadedCount++;
         if (loadedCount === files.length) {
-          // 全ての画像が読み込まれたら保存
-          chrome.storage.local.set({ animationFrames: animationFrames }, () => {
-            console.log('アニメーションフレームが保存されました。');
-            // アニメーションを開始していない場合は最初のフレームを表示
-            if (!animationInterval && animationFrames.length > 0) {
-              animationFrame.src = animationFrames[0];
+          // 全ての画像が読み込まれたら、バックグラウンドスクリプトにフレームデータを送信
+          chrome.runtime.sendMessage({ type: 'updateFrames', animationFrames: newAnimationFrames }, () => {
+            console.log('アニメーションフレームをバックグラウンドに送信しました。');
+            // オプションページのUIに最初のフレームを表示
+            if (newAnimationFrames.length > 0) {
+              animationFrame.src = newAnimationFrames[0];
             }
+          });
+          // オプションページが閉じられてもアニメーションが継続するように、ストレージにも保存
+          chrome.storage.local.set({ animationFrames: newAnimationFrames, currentFrameIndex: 0 }, () => {
+            console.log('アニメーションフレームがストレージに保存されました。');
           });
         }
       };
