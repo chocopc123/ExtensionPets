@@ -2,16 +2,19 @@
   "manifest_version": 3,
   "name": "Extension Pets",
   "description": "Extension Pets",
+  "permissions": ["storage"],
   "background": { "service_worker": "background.bundle.js" },
   "action": {
-    "default_icon": "extensionPetsIcon.png"
+    "default_icon": "extensionPetsIcon.png",
+    "default_popup": "popup.html"
   },
+  "options_page": "options.html",
   "icons": {
     "128": "extensionPetsIcon.png"
   },
   "web_accessible_resources": [
     {
-      "resources": ["stickman.png", "extensionPetsIcon.png"],
+      "resources": ["extensionPetsIcon.png"],
       "matches": []
     }
   ]

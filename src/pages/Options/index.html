@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Extension Pets Options</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        padding: 20px;
+      }
+      #animation-container {
+        border: 1px solid #ccc;
+        width: 100px;
+        height: 100px;
+        margin-top: 20px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+      }
+      #animation-frame {
+        max-width: 100%;
+        max-height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>アニメーション設定</h1>
+    <p>アニメーションに使用するPNGまたはJPG画像をアップロードしてください。ファイル名は連番（例: image_0001.png, image_0002.png）である必要があります。</p>
+    <input type="file" id="imageUpload" multiple accept=".png,.jpg,.jpeg" />
+    <button id="startAnimation">アニメーション開始</button>
+    <button id="stopAnimation">アニメーション停止</button>
+    <div id="animation-container">
+      <img id="animation-frame" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="アニメーションフレーム" />
+    </div>
+  </body>
+</html> 

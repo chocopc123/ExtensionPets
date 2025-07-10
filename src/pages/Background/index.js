@@ -1,47 +1,31 @@
 const canvas = new OffscreenCanvas(32, 32);
 const ctx = canvas.getContext('2d');
 
-const imageUrl = chrome.runtime.getURL('stickman.png');
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'updateIcon') {
+    const imageDataUrl = message.imageData;
 
-const totalFrames = 13; // フレームの総数
-let currentFrame = 0;
-
-fetch(imageUrl)
-  .then(response => response.blob())
-  .then(blob => createImageBitmap(blob))
-  .then(imgBitmap => {
-    const frameWidth = imgBitmap.width; // 縦分割なので幅は画像の元の幅
-    const frameHeight = imgBitmap.height / totalFrames;
-
-    console.log(`Image Width: ${imgBitmap.width}`);
-    console.log(`Image Height: ${imgBitmap.height}`);
-    console.log(`Total Frames: ${totalFrames}`);
-    console.log(`Calculated Frame Width: ${frameWidth}`);
-    console.log(`Calculated Frame Height: ${frameHeight}`);
-
-    setInterval(() => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      ctx.drawImage(
-        imgBitmap,
-        0, // sourceX
-        currentFrame * frameHeight, // sourceY
-        frameWidth,
-        frameHeight,
-        0,
-        0,
-        canvas.width,
-        canvas.height
-      );
-
-      chrome.action.setIcon({
-        imageData: ctx.getImageData(0, 0, canvas.width, canvas.height)
-      });
-
-      currentFrame = (currentFrame + 1) % totalFrames;
-    }, 100);
-  })
-  .catch(error => console.error('Error loading or processing image:', error));
+    fetch(imageDataUrl)
+      .then(response => response.blob())
+      .then(blob => createImageBitmap(blob))
+      .then(imgBitmap => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(imgBitmap, 0, 0, canvas.width, canvas.height);
+        chrome.action.setIcon({
+          imageData: ctx.getImageData(0, 0, canvas.width, canvas.height)
+        });
+      })
+      .catch(error => console.error('Error loading or processing image for icon update:', error));
+  } else if (message.type === 'startAnimationBackground') {
+    // オプションページが閉じられた後にバックグラウンドでアニメーションを継続するためのロジック（オプション）
+    // 必要に応じてここに実装を追加
+    console.log("バックグラウンドでのアニメーション開始リクエストを受信しました。");
+  } else if (message.type === 'stopAnimationBackground') {
+    // オプションページが閉じられた後にバックグラウンドでのアニメーションを停止するためのロジック（オプション）
+    // 必要に応じてここに実装を追加
+    console.log("バックグラウンドでのアニメーション停止リクエストを受信しました。");
+  }
+});
 
 console.log('This is the background page.');
 console.log('Put the background scripts here.');

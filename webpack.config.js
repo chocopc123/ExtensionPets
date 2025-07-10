@@ -39,6 +39,8 @@ var options = {
   mode: process.env.NODE_ENV || 'development',
   entry: {
     background: path.join(__dirname, 'src', 'pages', 'Background', 'index.js'),
+    options: path.join(__dirname, 'src', 'pages', 'Options', 'index.js'),
+    popup: path.join(__dirname, 'src', 'pages', 'Popup', 'index.js'),
   },
   chromeExtensionBoilerplate: {
     notHotReload: ['background', 'contentScript', 'devtools'],
@@ -154,20 +156,23 @@ var options = {
     new CopyWebpackPlugin({
       patterns: [
         {
-          from: 'src/assets/img/stickman.png',
-          to: path.join(__dirname, 'build'),
-          force: true,
-        },
-      ],
-    }),
-    new CopyWebpackPlugin({
-      patterns: [
-        {
           from: 'src/assets/img/extensionPetsIcon.png',
           to: path.join(__dirname, 'build'),
           force: true,
         },
       ],
+    }),
+    new HtmlWebpackPlugin({
+      template: path.join(__dirname, 'src', 'pages', 'Options', 'index.html'),
+      filename: 'options.html',
+      chunks: ['options'],
+      cache: false,
+    }),
+    new HtmlWebpackPlugin({
+      template: path.join(__dirname, 'src', 'pages', 'Popup', 'index.html'),
+      filename: 'popup.html',
+      chunks: ['popup'],
+      cache: false,
     }),
   ].filter(Boolean),
   infrastructureLogging: {
