@@ -28,8 +28,10 @@
     <h1>アニメーション設定</h1>
     <p>アニメーションに使用するPNGまたはJPG画像をアップロードしてください。ファイル名は連番（例: image_0001.png, image_0002.png）である必要があります。</p>
     <input type="file" id="imageUpload" multiple accept=".png,.jpg,.jpeg" />
-    <button id="startAnimation">アニメーション開始</button>
-    <button id="stopAnimation">アニメーション停止</button>
+    <button id="toggleAnimation">
+      <span id="animationIcon">▶</span>
+      アニメーション
+    </button>
 
     <div style="margin-top: 20px;">
       <label for="animationSpeed">アニメーション速度:</label>

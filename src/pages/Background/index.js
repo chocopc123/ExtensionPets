@@ -5,6 +5,7 @@ let backgroundAnimationInterval = null;
 let backgroundCurrentFrameIndex = 0;
 let backgroundAnimationFrames = [];
 let animationDisplayInterval = 200; // デフォルトのアニメーション間隔を200msに設定
+let isAnimating = false; // アニメーションが実行中かどうかを追跡
 
 const KEEP_ALIVE_ALARM_NAME = 'animationKeepAlive';
 
@@ -22,16 +23,35 @@ function createKeepAliveAlarm() {
 
 // アニメーションの状態をロードし、アニメーションを開始する共通関数
 function loadAndStartAnimation() {
-  chrome.storage.local.get(['animationFrames', 'currentFrameIndex', 'animationInterval'], (result) => {
+  chrome.storage.local.get(['animationFrames', 'currentFrameIndex', 'animationInterval', 'isAnimating'], (result) => {
     if (result.animationFrames && result.animationFrames.length > 0) {
       backgroundAnimationFrames = result.animationFrames;
       backgroundCurrentFrameIndex = result.currentFrameIndex || 0;
       if (result.animationInterval) {
         animationDisplayInterval = result.animationInterval;
       }
-      startBackgroundAnimation();
-      createKeepAliveAlarm(); // アニメーション開始時にキープアライブアラームも開始
-      console.log('保存されたアニメーションをロードして再開しました。');
+      // 保存されたisAnimatingの状態に基づいてアニメーションを開始または停止
+      isAnimating = result.isAnimating || false;
+      if (isAnimating) {
+        startBackgroundAnimation();
+        createKeepAliveAlarm();
+        console.log('保存されたアニメーションをロードして再開しました。');
+      } else {
+        console.log('保存されたアニメーションは停止状態です。');
+        // アニメーションが停止している場合は、最初のフレームをアイコンに設定
+        const imageDataUrl = backgroundAnimationFrames[backgroundCurrentFrameIndex];
+        fetch(imageDataUrl)
+          .then(response => response.blob())
+          .then(blob => createImageBitmap(blob))
+          .then(imgBitmap => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(imgBitmap, 0, 0, canvas.width, canvas.height);
+            chrome.action.setIcon({
+              imageData: ctx.getImageData(0, 0, canvas.width, canvas.height)
+            });
+          })
+          .catch(error => console.error('Error setting initial icon when not animating:', error));
+      }
     } else {
       console.log('保存されたアニメーションフレームが見つかりませんでした。');
     }
@@ -47,6 +67,9 @@ function startBackgroundAnimation() {
   if (backgroundAnimationInterval) {
     clearInterval(backgroundAnimationInterval);
   }
+
+  isAnimating = true;
+  chrome.storage.local.set({ isAnimating: true });
 
   // アニメーション開始時に現在のフレームを即座にアイコンに設定
   const initialImageDataUrl = backgroundAnimationFrames[backgroundCurrentFrameIndex];
@@ -87,6 +110,8 @@ function stopBackgroundAnimation() {
     backgroundAnimationInterval = null;
     console.log('バックグラウンドアニメーションが停止しました。');
   }
+  isAnimating = false;
+  chrome.storage.local.set({ isAnimating: false });
   // アニメーション停止時にキープアライブアラームもクリア
   chrome.alarms.clear(KEEP_ALIVE_ALARM_NAME, (wasCleared) => {
     if (wasCleared) {
@@ -159,6 +184,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       stopBackgroundAnimation();
       startBackgroundAnimation();
     }
+  } else if (message.type === 'getAnimationStatus') {
+    sendResponse({ isAnimating: isAnimating });
+  } else if (message.type === 'setAnimationStatus') {
+    isAnimating = message.isAnimating;
+    chrome.storage.local.set({ isAnimating: isAnimating });
   }
 });
 

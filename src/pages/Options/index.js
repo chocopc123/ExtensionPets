@@ -36,16 +36,26 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const imageUpload = document.getElementById('imageUpload');
-  const startAnimationBtn = document.getElementById('startAnimation');
-  const stopAnimationBtn = document.getElementById('stopAnimation');
+  const toggleAnimationBtn = document.getElementById('toggleAnimation');
+  const animationIcon = document.getElementById('animationIcon');
   const animationFrame = document.getElementById('animation-frame');
   const animationSpeedSlider = document.getElementById('animationSpeed');
   const currentSpeedSpan = document.getElementById('currentSpeed');
 
-  if (!imageUpload || !startAnimationBtn || !stopAnimationBtn || !animationFrame || !animationSpeedSlider || !currentSpeedSpan) {
+  if (!imageUpload || !toggleAnimationBtn || !animationIcon || !animationFrame || !animationSpeedSlider || !currentSpeedSpan) {
     console.error("必要なDOM要素が見つかりませんでした。HTMLファイルを確認してください。");
     return;
   }
+
+  let isAnimating = false; // アニメーションの状態を追跡
+
+  // バックグラウンドスクリプトから現在のアニメーション状態を取得し、ボタンを初期化
+  chrome.runtime.sendMessage({ type: 'getAnimationStatus' }, (response) => {
+    if (response && typeof response.isAnimating !== 'undefined') {
+      isAnimating = response.isAnimating;
+      animationIcon.textContent = isAnimating ? '❚❚' : '▶';
+    }
+  });
 
   // UI表示用にchrome.storageから保存されたアニメーションフレームと現在のフレームインデックスをロード
   chrome.storage.local.get(['animationFrames', 'currentFrameIndex'], (result) => {
@@ -100,9 +110,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // ボタンクリックイベントリスナー
-  startAnimationBtn.addEventListener('click', startAnimation);
-  stopAnimationBtn.addEventListener('click', stopAnimation);
+  // トグルボタンクリックイベントリスナー
+  toggleAnimationBtn.addEventListener('click', () => {
+    if (isAnimating) {
+      stopAnimation();
+      animationIcon.textContent = '▶';
+      isAnimating = false;
+      chrome.runtime.sendMessage({ type: 'setAnimationStatus', isAnimating: false });
+    } else {
+      startAnimation();
+      animationIcon.textContent = '❚❚';
+      isAnimating = true;
+      chrome.runtime.sendMessage({ type: 'setAnimationStatus', isAnimating: true });
+    }
+  });
 
   // アニメーション速度スライダーのイベントリスナー
   animationSpeedSlider.addEventListener('input', (event) => {
