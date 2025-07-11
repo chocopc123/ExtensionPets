@@ -10,13 +10,16 @@
       }
       #animation-container {
         border: 1px solid #ccc;
-        width: 100px;
-        height: 100px;
+        width: auto; /* 幅を自動調整 */
+        height: auto; /* 高さを自動調整 */
+        min-height: 100px; /* 最小高さを保持 */
         margin-top: 20px;
         display: flex;
-        justify-content: center;
-        align-items: center;
-        overflow: hidden;
+        flex-wrap: wrap; /* 画像を折り返す */
+        justify-content: flex-start; /* 左から配置 */
+        align-items: flex-start; /* 上から配置 */
+        overflow: auto; /* スクロール可能にする */
+        padding: 5px; /* パディングを追加 */
       }
       #animation-frame {
         max-width: 100%;
@@ -40,7 +43,6 @@
     </div>
 
     <div id="animation-container">
-      <img id="animation-frame" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="アニメーションフレーム" />
     </div>
   </body>
 </html> 

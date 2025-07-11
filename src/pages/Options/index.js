@@ -38,11 +38,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const imageUpload = document.getElementById('imageUpload');
   const toggleAnimationBtn = document.getElementById('toggleAnimation');
   const animationIcon = document.getElementById('animationIcon');
-  const animationFrame = document.getElementById('animation-frame');
+  const animationContainer = document.getElementById('animation-container');
   const animationSpeedSlider = document.getElementById('animationSpeed');
   const currentSpeedSpan = document.getElementById('currentSpeed');
 
-  if (!imageUpload || !toggleAnimationBtn || !animationIcon || !animationFrame || !animationSpeedSlider || !currentSpeedSpan) {
+  if (!imageUpload || !toggleAnimationBtn || !animationIcon || !animationContainer || !animationSpeedSlider || !currentSpeedSpan) {
     console.error("必要なDOM要素が見つかりませんでした。HTMLファイルを確認してください。");
     return;
   }
@@ -61,8 +61,16 @@ document.addEventListener('DOMContentLoaded', () => {
   chrome.storage.local.get(['animationFrames', 'currentFrameIndex'], (result) => {
     if (result.animationFrames && result.animationFrames.length > 0) {
       const animationFramesFromStorage = result.animationFrames;
-      const currentFrameIndexFromStorage = result.currentFrameIndex || 0;
-      animationFrame.src = animationFramesFromStorage[currentFrameIndexFromStorage];
+      // animationContainerをクリアして、すべてのフレームを表示
+      animationContainer.innerHTML = '';
+      animationFramesFromStorage.forEach(frameSrc => {
+        const img = document.createElement('img');
+        img.src = frameSrc;
+        img.style.maxWidth = '100%';
+        img.style.maxHeight = '100%';
+        img.style.marginRight = '5px'; // 必要に応じてマージンを追加
+        animationContainer.appendChild(img);
+      });
     }
   });
 
@@ -95,10 +103,16 @@ document.addEventListener('DOMContentLoaded', () => {
           // 全ての画像が読み込まれたら、バックグラウンドスクリプトにフレームデータを送信
           chrome.runtime.sendMessage({ type: 'updateFrames', animationFrames: newAnimationFrames }, () => {
             console.log('アニメーションフレームをバックグラウンドに送信しました。');
-            // オプションページのUIに最初のフレームを表示
-            if (newAnimationFrames.length > 0) {
-              animationFrame.src = newAnimationFrames[0];
-            }
+            // オプションページのUIにすべてのフレームを表示
+            animationContainer.innerHTML = ''; // 古い画像をクリア
+            newAnimationFrames.forEach(frameSrc => {
+              const img = document.createElement('img');
+              img.src = frameSrc;
+              img.style.maxWidth = '100%';
+              img.style.maxHeight = '100%';
+              img.style.marginRight = '5px'; // 必要に応じてマージンを追加
+              animationContainer.appendChild(img);
+            });
           });
           // オプションページが閉じられてもアニメーションが継続するように、ストレージにも保存
           chrome.storage.local.set({ animationFrames: newAnimationFrames, currentFrameIndex: 0 }, () => {
