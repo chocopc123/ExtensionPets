@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Extension Pets",
   "description": "Extension Pets",
-  "permissions": ["storage"],
+  "permissions": ["storage", "alarms"],
   "background": { "service_worker": "background.bundle.js" },
   "action": {
     "default_icon": "extensionPetsIcon.png",

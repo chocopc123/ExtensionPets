@@ -6,6 +6,38 @@ let backgroundCurrentFrameIndex = 0;
 let backgroundAnimationFrames = [];
 let animationDisplayInterval = 200; // デフォルトのアニメーション間隔を200msに設定
 
+const KEEP_ALIVE_ALARM_NAME = 'animationKeepAlive';
+
+// Service Workerをアクティブに保つためのアラームを作成する関数
+function createKeepAliveAlarm() {
+  chrome.alarms.get(KEEP_ALIVE_ALARM_NAME, (alarm) => {
+    if (typeof alarm === 'undefined') {
+      chrome.alarms.create(KEEP_ALIVE_ALARM_NAME, {
+        periodInMinutes: 0.5 // 30秒ごとにアラームを発火してService Workerをアクティブに保つ
+      });
+      console.log('キープアライブアラームを作成しました。');
+    }
+  });
+}
+
+// アニメーションの状態をロードし、アニメーションを開始する共通関数
+function loadAndStartAnimation() {
+  chrome.storage.local.get(['animationFrames', 'currentFrameIndex', 'animationInterval'], (result) => {
+    if (result.animationFrames && result.animationFrames.length > 0) {
+      backgroundAnimationFrames = result.animationFrames;
+      backgroundCurrentFrameIndex = result.currentFrameIndex || 0;
+      if (result.animationInterval) {
+        animationDisplayInterval = result.animationInterval;
+      }
+      startBackgroundAnimation();
+      createKeepAliveAlarm(); // アニメーション開始時にキープアライブアラームも開始
+      console.log('保存されたアニメーションをロードして再開しました。');
+    } else {
+      console.log('保存されたアニメーションフレームが見つかりませんでした。');
+    }
+  });
+}
+
 function startBackgroundAnimation() {
   if (backgroundAnimationFrames.length === 0) {
     console.warn('バックグラウンドアニメーションフレームがありません。');
@@ -15,6 +47,21 @@ function startBackgroundAnimation() {
   if (backgroundAnimationInterval) {
     clearInterval(backgroundAnimationInterval);
   }
+
+  // アニメーション開始時に現在のフレームを即座にアイコンに設定
+  const initialImageDataUrl = backgroundAnimationFrames[backgroundCurrentFrameIndex];
+  fetch(initialImageDataUrl)
+    .then(response => response.blob())
+    .then(blob => createImageBitmap(blob))
+    .then(imgBitmap => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(imgBitmap, 0, 0, canvas.width, canvas.height);
+      chrome.action.setIcon({
+        imageData: ctx.getImageData(0, 0, canvas.width, canvas.height)
+      });
+      console.log(`初期アイコンをフレーム ${backgroundCurrentFrameIndex} で設定しました。`);
+    })
+    .catch(error => console.error('Error setting initial icon for animation:', error));
 
   backgroundAnimationInterval = setInterval(() => {
     backgroundCurrentFrameIndex = (backgroundCurrentFrameIndex + 1) % backgroundAnimationFrames.length;
@@ -40,7 +87,26 @@ function stopBackgroundAnimation() {
     backgroundAnimationInterval = null;
     console.log('バックグラウンドアニメーションが停止しました。');
   }
+  // アニメーション停止時にキープアライブアラームもクリア
+  chrome.alarms.clear(KEEP_ALIVE_ALARM_NAME, (wasCleared) => {
+    if (wasCleared) {
+      console.log('キープアライブアラームをクリアしました。');
+    } else {
+      console.log('キープアライブアラームは存在しませんでした。');
+    }
+  });
 }
+
+// キープアライブアラームが発火した際のリスナー
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === KEEP_ALIVE_ALARM_NAME) {
+    // Service Workerをアクティブに保つための軽量な処理
+    // chrome.runtime.getPlatformInfo()のようなAPI呼び出しがService Workerのタイマーをリセットする
+    chrome.runtime.getPlatformInfo(() => {
+      console.log('キープアライブアラーム発火: Service Workerアクティブを維持。');
+    });
+  }
+});
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'updateIcon') {
@@ -61,6 +127,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .catch(error => console.error('Error loading or processing image for icon update:', error));
   } else if (message.type === 'startAnimationBackground') {
     startBackgroundAnimation();
+    createKeepAliveAlarm(); // 開始メッセージ受信時もキープアライブを確実に開始
   } else if (message.type === 'stopAnimationBackground') {
     stopBackgroundAnimation();
   } else if (message.type === 'updateFrames') {
@@ -95,27 +162,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-// 拡張機能が起動されたときに、保存されたアニメーション状態をロードして再開
+// 拡張機能がインストールされたときにアニメーションをロードして再開
 chrome.runtime.onInstalled.addListener(() => {
-    chrome.storage.local.get(['animationFrames', 'currentFrameIndex', 'animationInterval'], (result) => {
-        if (result.animationFrames && result.animationFrames.length > 0) {
-            backgroundAnimationFrames = result.animationFrames;
-            backgroundCurrentFrameIndex = result.currentFrameIndex || 0;
-            if (result.animationInterval) {
-              animationDisplayInterval = result.animationInterval;
-            }
-            startBackgroundAnimation();
-        }
-    });
+  console.log('chrome.runtime.onInstalled fired. Attempting to load animation.');
+  loadAndStartAnimation();
 });
 
-// スクリプト読み込み時に、既に保存されているアニメーション間隔があればロードする
-chrome.storage.local.get(['animationInterval'], (result) => {
-  if (result.animationInterval) {
-    animationDisplayInterval = result.animationInterval;
-    console.log(`バックグラウンドでロードされたアニメーション間隔: ${animationDisplayInterval}ms`);
-  }
+// ブラウザが起動したときにアニメーションをロードして再開
+chrome.runtime.onStartup.addListener(() => {
+  console.log('chrome.runtime.onStartup fired. Attempting to restart animation.');
+  loadAndStartAnimation();
 });
+
+// Service Workerがアクティブになったときに、保存されたアニメーション状態をロードして再開
+// このリスナーは、Service Workerがアイドル状態から再起動された際にアニメーションを再開するために残しておく
+chrome.runtime.onConnect.addListener(() => {
+  console.log('chrome.runtime.onConnect fired. Attempting to restart animation.');
+  loadAndStartAnimation();
+});
+
 
 console.log('This is the background page.');
 console.log('Put the background scripts here.');
