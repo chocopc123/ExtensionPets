@@ -170,8 +170,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // ファイルアップロードの処理
   imageUpload.addEventListener('change', (event) => {
     const files = Array.from(event.target.files);
-    let newAnimationFrames = [];
-
     // ファイルを連番でソート
     files.sort((a, b) => {
       const numA = extractSequenceNumber(a.name);
@@ -179,38 +177,38 @@ document.addEventListener('DOMContentLoaded', () => {
       return numA - numB; // 昇順にソート
     });
 
-    let loadedCount = 0;
-    files.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        newAnimationFrames.push(e.target.result);
-        loadedCount++;
-        if (loadedCount === files.length) {
-          // 全ての画像が読み込まれたら、バックグラウンドスクリプトにフレームデータを送信
-          // ここでは直接アニメーションを更新せず、一時的な「現在のプレビュー」として扱う
-          chrome.runtime.sendMessage({ type: 'updateFramesPreview', animationFrames: newAnimationFrames }, () => {
-            console.log('アニメーションフレームをバックグラウンドに送信しました。(プレビュー用)');
-            // オプションページのUIにすべてのフレームを表示
-            animationContainer.innerHTML = ''; // 古い画像をクリア
-            newAnimationFrames.forEach(frameSrc => {
-              const img = document.createElement('img');
-              img.src = frameSrc;
-              img.style.maxWidth = '100%';
-              img.style.maxHeight = '100%';
-              img.style.marginRight = '5px'; // 必要に応じてマージンを追加
-              animationContainer.appendChild(img);
-            });
-            // アニメーション速度スライダーの値を現在の値に設定
-            chrome.storage.local.get(['animationInterval'], (result) => {
-              const currentInterval = result.animationInterval || 200;
-              animationSpeedSlider.value = currentInterval;
-              currentSpeedSpan.textContent = `${currentInterval}ms`;
-            });
-          });
-          // アップロードされたフレームはまだ保存されていない
-        }
-      };
-      reader.readAsDataURL(file);
+    const fileReadPromises = files.map(file => {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          resolve(e.target.result);
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+
+    Promise.all(fileReadPromises).then(newAnimationFrames => {
+      // 全ての画像が読み込まれたら、バックグラウンドスクリプトにフレームデータを送信
+      // ここでは直接アニメーションを更新せず、一時的な「現在のプレビュー」として扱う
+      chrome.runtime.sendMessage({ type: 'updateFramesPreview', animationFrames: newAnimationFrames }, () => {
+        console.log('アニメーションフレームをバックグラウンドに送信しました。(プレビュー用)');
+        // オプションページのUIにすべてのフレームを表示
+        animationContainer.innerHTML = ''; // 古い画像をクリア
+        newAnimationFrames.forEach(frameSrc => {
+          const img = document.createElement('img');
+          img.src = frameSrc;
+          img.style.maxWidth = '100%';
+          img.style.maxHeight = '100%';
+          img.style.marginRight = '5px'; // 必要に応じてマージンを追加
+          animationContainer.appendChild(img);
+        });
+        // アニメーション速度スライダーの値を現在の値に設定
+        chrome.storage.local.get(['animationInterval'], (result) => {
+          const currentInterval = result.animationInterval || 200;
+          animationSpeedSlider.value = currentInterval;
+          currentSpeedSpan.textContent = `${currentInterval}ms`;
+        });
+      });
     });
   });
 
