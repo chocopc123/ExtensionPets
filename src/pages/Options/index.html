@@ -30,6 +30,13 @@
     <input type="file" id="imageUpload" multiple accept=".png,.jpg,.jpeg" />
     <button id="startAnimation">アニメーション開始</button>
     <button id="stopAnimation">アニメーション停止</button>
+
+    <div style="margin-top: 20px;">
+      <label for="animationSpeed">アニメーション速度:</label>
+      <input type="range" id="animationSpeed" min="20" max="300" value="100" step="10" />
+      <span id="currentSpeed">200ms</span>
+    </div>
+
     <div id="animation-container">
       <img id="animation-frame" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="アニメーションフレーム" />
     </div>

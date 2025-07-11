@@ -4,6 +4,7 @@ const ctx = canvas.getContext('2d');
 let backgroundAnimationInterval = null;
 let backgroundCurrentFrameIndex = 0;
 let backgroundAnimationFrames = [];
+let animationDisplayInterval = 200; // デフォルトのアニメーション間隔を200msに設定
 
 function startBackgroundAnimation() {
   if (backgroundAnimationFrames.length === 0) {
@@ -30,7 +31,7 @@ function startBackgroundAnimation() {
         });
       })
       .catch(error => console.error('Error updating icon from background animation:', error));
-  }, 100); // 100msごとにフレームを更新
+  }, animationDisplayInterval); // 設定されたアニメーション間隔を使用
 }
 
 function stopBackgroundAnimation() {
@@ -83,18 +84,37 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         })
         .catch(error => console.error('Error setting initial icon from background update:', error));
     }
+  } else if (message.type === 'updateAnimationInterval') {
+    animationDisplayInterval = message.interval; // 新しいアニメーション間隔を更新
+    console.log(`バックグラウンドでアニメーション間隔を更新しました: ${animationDisplayInterval}ms`);
+    if (backgroundAnimationInterval) {
+      // アニメーションが実行中の場合、新しい間隔で再起動
+      stopBackgroundAnimation();
+      startBackgroundAnimation();
+    }
   }
 });
 
 // 拡張機能が起動されたときに、保存されたアニメーション状態をロードして再開
 chrome.runtime.onInstalled.addListener(() => {
-    chrome.storage.local.get(['animationFrames', 'currentFrameIndex'], (result) => {
+    chrome.storage.local.get(['animationFrames', 'currentFrameIndex', 'animationInterval'], (result) => {
         if (result.animationFrames && result.animationFrames.length > 0) {
             backgroundAnimationFrames = result.animationFrames;
             backgroundCurrentFrameIndex = result.currentFrameIndex || 0;
+            if (result.animationInterval) {
+              animationDisplayInterval = result.animationInterval;
+            }
             startBackgroundAnimation();
         }
     });
+});
+
+// スクリプト読み込み時に、既に保存されているアニメーション間隔があればロードする
+chrome.storage.local.get(['animationInterval'], (result) => {
+  if (result.animationInterval) {
+    animationDisplayInterval = result.animationInterval;
+    console.log(`バックグラウンドでロードされたアニメーション間隔: ${animationDisplayInterval}ms`);
+  }
 });
 
 console.log('This is the background page.');

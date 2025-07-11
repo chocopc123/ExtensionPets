@@ -39,8 +39,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const startAnimationBtn = document.getElementById('startAnimation');
   const stopAnimationBtn = document.getElementById('stopAnimation');
   const animationFrame = document.getElementById('animation-frame');
+  const animationSpeedSlider = document.getElementById('animationSpeed');
+  const currentSpeedSpan = document.getElementById('currentSpeed');
 
-  if (!imageUpload || !startAnimationBtn || !stopAnimationBtn || !animationFrame) {
+  if (!imageUpload || !startAnimationBtn || !stopAnimationBtn || !animationFrame || !animationSpeedSlider || !currentSpeedSpan) {
     console.error("必要なDOM要素が見つかりませんでした。HTMLファイルを確認してください。");
     return;
   }
@@ -52,6 +54,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const currentFrameIndexFromStorage = result.currentFrameIndex || 0;
       animationFrame.src = animationFramesFromStorage[currentFrameIndexFromStorage];
     }
+  });
+
+  // アニメーション速度の設定をロード
+  chrome.storage.local.get(['animationInterval'], (result) => {
+    const savedInterval = result.animationInterval || 200; // デフォルト値は200ms
+    animationSpeedSlider.value = savedInterval;
+    currentSpeedSpan.textContent = `${savedInterval}ms`;
   });
 
   // ファイルアップロードの処理
@@ -94,4 +103,18 @@ document.addEventListener('DOMContentLoaded', () => {
   // ボタンクリックイベントリスナー
   startAnimationBtn.addEventListener('click', startAnimation);
   stopAnimationBtn.addEventListener('click', stopAnimation);
+
+  // アニメーション速度スライダーのイベントリスナー
+  animationSpeedSlider.addEventListener('input', (event) => {
+    const newSpeed = event.target.value;
+    currentSpeedSpan.textContent = `${newSpeed}ms`;
+    // バックグラウンドスクリプトに新しい速度を送信
+    chrome.runtime.sendMessage({ type: 'updateAnimationInterval', interval: parseInt(newSpeed, 10) }, () => {
+      console.log(`アニメーション速度をバックグラウンドに送信しました: ${newSpeed}ms`);
+    });
+    // ストレージに速度を保存
+    chrome.storage.local.set({ animationInterval: parseInt(newSpeed, 10) }, () => {
+      console.log(`アニメーション速度をストレージに保存しました: ${newSpeed}ms`);
+    });
+  });
 });
