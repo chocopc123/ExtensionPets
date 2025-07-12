@@ -70,18 +70,12 @@ document.addEventListener('DOMContentLoaded', () => {
         div.style.alignItems = 'center'; // 垂直方向の中央揃え
         div.style.marginBottom = '10px'; // 下部に余白を追加
 
-        // サムネイル画像を作成
-        const thumbnailImg = document.createElement('img');
-        if (savedSets[name].frames && savedSets[name].frames.length > 0) {
-          thumbnailImg.src = savedSets[name].frames[0]; // 最初のフレームをサムネイルとして使用
-        } else {
-          thumbnailImg.src = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='; // 透明な1x1ピクセルGIF
-        }
-        thumbnailImg.style.width = '50px'; // サムネイルの幅
-        thumbnailImg.style.height = '50px'; // サムネイルの高さ
-        thumbnailImg.style.objectFit = 'cover'; // 画像がコンテナに収まるようにトリミング
-        thumbnailImg.style.marginRight = '10px'; // 画像とテキストの間に余白
-        thumbnailImg.style.border = '1px solid #ddd'; // 枠線を追加
+        // Create a label to wrap the radio button, thumbnail, and text
+        const animationGroupLabel = document.createElement('label');
+        animationGroupLabel.htmlFor = `anim-${name}`; // Associate with the input by ID
+        animationGroupLabel.style.display = 'flex'; // Make the label a flex container too
+        animationGroupLabel.style.alignItems = 'center'; // Align items within the label
+        animationGroupLabel.style.cursor = 'pointer'; // Indicate it's clickable
 
         const input = document.createElement('input');
         input.type = 'radio';
@@ -123,13 +117,25 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         });
 
-        const label = document.createElement('label');
-        label.htmlFor = `anim-${name}`;
-        label.textContent = name;
+        const thumbnailImg = document.createElement('img');
+        if (savedSets[name].frames && savedSets[name].frames.length > 0) {
+          thumbnailImg.src = savedSets[name].frames[0]; // 最初のフレームをサムネイルとして使用
+        } else {
+          thumbnailImg.src = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='; // 透明な1x1ピクセルGIF
+        }
+        thumbnailImg.style.width = '50px'; // サムネイルの幅
+        thumbnailImg.style.height = '50px'; // サムネイルの高さ
+        thumbnailImg.style.objectFit = 'cover'; // 画像がコンテナに収まるようにトリミング
+        thumbnailImg.style.marginRight = '10px'; // 画像とテキストの間に余白
+        thumbnailImg.style.border = '1px solid #ddd'; // 枠線を追加
+
+        const animationNameSpan = document.createElement('span'); // Use a span for the text content
+        animationNameSpan.textContent = name;
+        animationNameSpan.style.marginRight = '10px'; // Add some margin to separate from delete button
 
         const deleteBtn = document.createElement('button');
         deleteBtn.textContent = '削除';
-        deleteBtn.style.marginLeft = '10px';
+        deleteBtn.style.marginLeft = '10px'; // Add some margin to separate from animation name
         deleteBtn.addEventListener('click', () => {
           // eslint-disable-next-line no-restricted-globals
           if (confirm(`アニメーション「${name}」を本当に削除しますか？`)) {
@@ -144,9 +150,13 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         });
 
-        div.appendChild(input);
-        div.appendChild(thumbnailImg); // サムネイル画像を追加
-        div.appendChild(label);
+        // Append elements to the new label
+        animationGroupLabel.appendChild(input);
+        animationGroupLabel.appendChild(thumbnailImg);
+        animationGroupLabel.appendChild(animationNameSpan);
+
+        // Append the combined label and delete button to the main div
+        div.appendChild(animationGroupLabel);
         div.appendChild(deleteBtn);
         savedAnimationsList.appendChild(div);
       }
