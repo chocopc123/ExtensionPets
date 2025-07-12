@@ -66,6 +66,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
       for (const name in savedSets) {
         const div = document.createElement('div');
+        div.style.display = 'flex'; // Flexboxを使って要素を横並びにする
+        div.style.alignItems = 'center'; // 垂直方向の中央揃え
+        div.style.marginBottom = '10px'; // 下部に余白を追加
+
+        // サムネイル画像を作成
+        const thumbnailImg = document.createElement('img');
+        if (savedSets[name].frames && savedSets[name].frames.length > 0) {
+          thumbnailImg.src = savedSets[name].frames[0]; // 最初のフレームをサムネイルとして使用
+        } else {
+          thumbnailImg.src = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='; // 透明な1x1ピクセルGIF
+        }
+        thumbnailImg.style.width = '50px'; // サムネイルの幅
+        thumbnailImg.style.height = '50px'; // サムネイルの高さ
+        thumbnailImg.style.objectFit = 'cover'; // 画像がコンテナに収まるようにトリミング
+        thumbnailImg.style.marginRight = '10px'; // 画像とテキストの間に余白
+        thumbnailImg.style.border = '1px solid #ddd'; // 枠線を追加
+
         const input = document.createElement('input');
         input.type = 'radio';
         input.name = 'savedAnimation';
@@ -128,6 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         div.appendChild(input);
+        div.appendChild(thumbnailImg); // サムネイル画像を追加
         div.appendChild(label);
         div.appendChild(deleteBtn);
         savedAnimationsList.appendChild(div);
