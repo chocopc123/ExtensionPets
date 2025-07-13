@@ -278,11 +278,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       });
       // もし更新されたアニメーションが現在アクティブなアニメーションであれば、表示速度も更新
       if (currentActiveAnimationName === animationName) {
-        animationDisplayInterval = newInterval;
-        if (isAnimating) {
-          stopBackgroundAnimation();
-          startBackgroundAnimation();
-        }
+    animationDisplayInterval = newInterval;
+    if (isAnimating) {
+      stopBackgroundAnimation();
+      startBackgroundAnimation();
+    }
       }
     } else {
       console.error(`アニメーション「${animationName}」が見つかりませんでした。`);

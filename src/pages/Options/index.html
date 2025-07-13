@@ -27,7 +27,7 @@
       <div class="mb-6">
         <label for="animationSpeed" class="block text-sm font-medium text-gray-700 mb-2">アニメーション速度:</label>
         <div class="flex items-center space-x-4">
-          <input type="range" id="animationSpeed" min="20" max="300" value="100" step="10" class="flex-grow h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-lg" />
+          <input type="range" id="animationSpeed" min="20" max="300" value="100" step="10" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-lg">
           <span id="currentSpeed" class="text-gray-700 font-medium">200ms</span>
         </div>
       </div>
@@ -36,7 +36,7 @@
       </div>
 
       <div id="saved-animations-section" class="mt-8 pt-6 border-t border-gray-200">
-        <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center justify-between mb-8">
           <h2 class="text-2xl font-bold text-gray-800">保存済みアニメーション</h2>
           <p id="storage-usage" class="text-gray-700 text-sm font-bold">読み込み中...</p>
         </div>
@@ -51,4 +51,4 @@
       </div>
     </div>
   </body>
-</html> 
+</html>

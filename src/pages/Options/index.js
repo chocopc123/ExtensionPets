@@ -168,14 +168,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 新しい速度コントロール用のdiv
         const speedControlDiv = document.createElement('div');
-        speedControlDiv.className = 'flex items-center w-1/2 flex-none'; // mr-2.5 を削除
+        speedControlDiv.className = 'flex items-center w-1/2 flex-none gap-x-2.5 mr-5' // mr-2.5 を削除, gap-x-2.5 を追加
         
-        const speedLabel = document.createElement('label');
-        speedLabel.htmlFor = `speed-${name}`;
-        speedLabel.className = 'block text-sm font-medium text-gray-700 mr-2 pl-9';
-        speedLabel.textContent = '速度:';
-        speedControlDiv.appendChild(speedLabel);
-
         const animationSpeedSlider = document.createElement('input');
         animationSpeedSlider.type = 'range';
         animationSpeedSlider.id = `speed-${name}`;
@@ -188,7 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const currentSpeedSpan = document.createElement('span');
         currentSpeedSpan.id = `currentSpeed-${name}`;
-        currentSpeedSpan.className = 'text-gray-700 font-medium ml-2';
+        currentSpeedSpan.className = 'text-gray-700 font-medium'; // ml-2 を削除
         currentSpeedSpan.textContent = `${savedSets[name].interval}ms`;
         speedControlDiv.appendChild(currentSpeedSpan);
 
@@ -207,11 +201,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const sizeSpan = document.createElement('span');
         sizeSpan.textContent = `Approx. ${animationSizeKB}KB`;
-        sizeSpan.className = 'text-gray-500 text-sm'; // ml-auto を削除
+        sizeSpan.className = 'text-gray-500 text-sm';
 
         const deleteBtn = document.createElement('button');
         deleteBtn.textContent = '削除';
-        deleteBtn.className = 'px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2'; // ml-auto を削除
+        deleteBtn.className = 'px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2';
         deleteBtn.addEventListener('click', () => {
           // eslint-disable-next-line no-restricted-globals
           if (confirm(`アニメーション「${name}」を本当に削除しますか？`)) {
