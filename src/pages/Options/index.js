@@ -84,8 +84,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 savedSets[name].frames.forEach(frameSrc => {
                   const img = document.createElement('img');
                   img.src = frameSrc;
-                  img.style.maxWidth = '100%';
-                  img.style.maxHeight = '100%';
+                  img.style.width = '75px'; // 画像サイズを大きく
+                  img.style.height = '75px'; // 画像サイズを大きく
+                  img.style.objectFit = 'cover'; // アスペクト比を保ちつつ表示
                   img.style.marginRight = '5px';
                   animationContainer.appendChild(img);
                 });
@@ -152,8 +153,9 @@ document.addEventListener('DOMContentLoaded', () => {
       animationFramesFromStorage.forEach(frameSrc => {
         const img = document.createElement('img');
         img.src = frameSrc;
-        img.style.maxWidth = '100%';
-        img.style.maxHeight = '100%';
+        img.style.width = '75px'; // 画像サイズを大きく
+        img.style.height = '75px'; // 画像サイズを大きく
+        img.style.objectFit = 'cover'; // アスペクト比を保ちつつ表示
         img.style.marginRight = '5px'; // 必要に応じてマージンを追加
         animationContainer.appendChild(img);
       });
@@ -197,8 +199,9 @@ document.addEventListener('DOMContentLoaded', () => {
         newAnimationFrames.forEach(frameSrc => {
           const img = document.createElement('img');
           img.src = frameSrc;
-          img.style.maxWidth = '100%';
-          img.style.maxHeight = '100%';
+          img.style.width = '75px'; // 画像サイズを大きく
+          img.style.height = '75px'; // 画像サイズを大きく
+          img.style.objectFit = 'cover'; // アスペクト比を保ちつつ表示
           img.style.marginRight = '5px'; // 必要に応じてマージンを追加
           animationContainer.appendChild(img);
         });
