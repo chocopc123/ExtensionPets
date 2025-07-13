@@ -66,6 +66,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
       for (const name in savedSets) {
         const div = document.createElement('div');
+        div.className = 'flex items-center mb-2.5'; // Tailwind classes for flex container
+
+        // Create a label to wrap the radio button, thumbnail, and text
+        const animationGroupLabel = document.createElement('label');
+        animationGroupLabel.htmlFor = `anim-${name}`;
+        animationGroupLabel.className = 'flex items-center cursor-pointer flex-grow'; // Tailwind classes for label
+
         const input = document.createElement('input');
         input.type = 'radio';
         input.name = 'savedAnimation';
@@ -84,10 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 savedSets[name].frames.forEach(frameSrc => {
                   const img = document.createElement('img');
                   img.src = frameSrc;
-                  img.style.width = '75px'; // 画像サイズを大きく
-                  img.style.height = '75px'; // 画像サイズを大きく
-                  img.style.objectFit = 'cover'; // アスペクト比を保ちつつ表示
-                  img.style.marginRight = '5px';
+                  img.className = 'w-[75px] h-[75px] object-cover mr-1.5'; // Tailwind classes for preview images
                   animationContainer.appendChild(img);
                 });
                 // 速度スライダーを更新
@@ -107,13 +111,21 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         });
 
-        const label = document.createElement('label');
-        label.htmlFor = `anim-${name}`;
-        label.textContent = name;
+        const thumbnailImg = document.createElement('img');
+        if (savedSets[name].frames && savedSets[name].frames.length > 0) {
+          thumbnailImg.src = savedSets[name].frames[0]; // 最初のフレームをサムネイルとして使用
+        } else {
+          thumbnailImg.src = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='; // 透明な1x1ピクセルGIF
+        }
+        thumbnailImg.className = 'w-[35px] h-[35px] object-cover mr-2.5 border border-gray-300'; // Tailwind classes for thumbnail
+
+        const animationNameSpan = document.createElement('span'); // Use a span for the text content
+        animationNameSpan.textContent = name;
+        animationNameSpan.className = 'mr-2.5 font-bold';
 
         const deleteBtn = document.createElement('button');
         deleteBtn.textContent = '削除';
-        deleteBtn.style.marginLeft = '10px';
+        deleteBtn.className = 'px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 ml-2.5'; // Add Tailwind classes
         deleteBtn.addEventListener('click', () => {
           // eslint-disable-next-line no-restricted-globals
           if (confirm(`アニメーション「${name}」を本当に削除しますか？`)) {
