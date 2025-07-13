@@ -5,11 +5,12 @@ var webpack = require('webpack'),
   CopyWebpackPlugin = require('copy-webpack-plugin'),
   HtmlWebpackPlugin = require('html-webpack-plugin'),
   TerserPlugin = require('terser-webpack-plugin');
+var MiniCssExtractPlugin = require('mini-css-extract-plugin');
 var { CleanWebpackPlugin } = require('clean-webpack-plugin');
 var ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
 var ReactRefreshTypeScript = require('react-refresh-typescript');
 
-const ASSET_PATH = process.env.ASSET_PATH || '/';
+const ASSET_PATH = process.env.ASSET_PATH || './'; // Change from '/' to './'
 
 var alias = {};
 
@@ -39,7 +40,7 @@ var options = {
   mode: process.env.NODE_ENV || 'development',
   entry: {
     background: path.join(__dirname, 'src', 'pages', 'Background', 'index.js'),
-    options: path.join(__dirname, 'src', 'pages', 'Options', 'index.js'),
+    options: [path.join(__dirname, 'src', 'pages', 'Options', 'index.js'), path.join(__dirname, 'src', 'assets', 'css', 'options.css')],
     popup: path.join(__dirname, 'src', 'pages', 'Popup', 'index.js'),
   },
   chromeExtensionBoilerplate: {
@@ -59,16 +60,13 @@ var options = {
         // in the `src` directory
         use: [
           {
-            loader: 'style-loader',
+            loader: MiniCssExtractPlugin.loader,
           },
           {
             loader: 'css-loader',
           },
           {
-            loader: 'sass-loader',
-            options: {
-              sourceMap: true,
-            },
+            loader: 'postcss-loader',
           },
         ],
       },
@@ -157,7 +155,7 @@ var options = {
       patterns: [
         {
           from: 'src/assets/img/extensionPetsIcon.png',
-          to: path.join(__dirname, 'build'),
+          to: path.join(__dirname, 'build', 'extensionPetsIcon.png'),
           force: true,
         },
       ],
@@ -174,6 +172,7 @@ var options = {
       chunks: ['popup'],
       cache: false,
     }),
+    new MiniCssExtractPlugin({ filename: '[name].[contenthash].css' }), // Add this line
   ].filter(Boolean),
   infrastructureLogging: {
     level: 'info',
