@@ -235,16 +235,36 @@ document.addEventListener('DOMContentLoaded', () => {
     const animationName = animationNameInput.value.trim();
     if (animationName) {
       // 現在のプレビューフレームと速度を取得して保存
-      chrome.storage.local.get(['currentPreviewFrames', 'animationInterval'], (result) => {
+      chrome.storage.local.get(['currentPreviewFrames', 'animationInterval', 'savedAnimationSets'], (result) => {
         const framesToSave = result.currentPreviewFrames || [];
         const intervalToSave = result.animationInterval || 200;
+        const existingSets = result.savedAnimationSets || {};
 
         if (framesToSave.length > 0) {
+          if (existingSets[animationName]) {
+            // 同一名のアニメーションが既に存在する場合、確認ポップアップを表示
+            // eslint-disable-next-line no-restricted-globals
+            if (!confirm(`アニメーション「${animationName}」は既に存在します。上書きしますか？`)) {
+              console.log('アニメーションの保存がキャンセルされました。');
+              return; // ユーザーがキャンセルした場合、処理を中断
+            }
+          }
+
           chrome.runtime.sendMessage({ type: 'saveAnimation', animationName: animationName, animationFrames: framesToSave, animationInterval: intervalToSave }, (response) => {
             if (response && response.success) {
               console.log(`アニメーション「${animationName}」を保存しました。`);
               animationNameInput.value = ''; // 入力フィールドをクリア
               renderSavedAnimations(); // 保存されたリストを再レンダリング
+
+              // 保存後、上書きされたアニメーションを再度ロードして表示を更新
+              chrome.runtime.sendMessage({ type: 'loadAnimation', animationName: animationName }, (loadResponse) => {
+                if (loadResponse && loadResponse.success) {
+                  console.log(`アニメーション「${animationName}」を再ロードし、表示を更新しました。`);
+                } else {
+                  console.error(`アニメーション「${animationName}」の再ロードに失敗しました。`);
+                }
+              });
+
             } else {
               console.error(`アニメーション「${animationName}」の保存に失敗しました。`);
             }
