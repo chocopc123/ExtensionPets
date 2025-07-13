@@ -140,8 +140,11 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         });
 
-        div.appendChild(input);
-        div.appendChild(label);
+        animationGroupLabel.appendChild(input);
+        animationGroupLabel.appendChild(thumbnailImg);
+        animationGroupLabel.appendChild(animationNameSpan);
+
+        div.appendChild(animationGroupLabel);
         div.appendChild(deleteBtn);
         savedAnimationsList.appendChild(div);
       }
