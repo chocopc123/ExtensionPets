@@ -36,7 +36,10 @@
       </div>
 
       <div id="saved-animations-section" class="mt-8 pt-6 border-t border-gray-200">
-        <h2 class="text-2xl font-bold mb-2 text-gray-800">保存済みアニメーション</h2>
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-2xl font-bold text-gray-800">保存済みアニメーション</h2>
+          <p id="storage-usage" class="text-gray-700 text-sm font-bold">読み込み中...</p>
+        </div>
         <div class="mb-3 flex items-center space-x-4">
           <input type="text" id="animationNameInput" placeholder="アニメーション名を入力" class="flex-grow p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
           <button id="saveAnimationBtn" class="px-5 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">現在のアニメーションを保存</button>

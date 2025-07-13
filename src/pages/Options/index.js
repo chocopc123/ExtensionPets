@@ -4,6 +4,15 @@ function extractSequenceNumber(filename) {
   return match ? parseInt(match[1], 10) : 0;
 }
 
+// ベース64コンテンツのバイトサイズを概算する関数
+function estimateBase64SizeInBytes(base64Content) {
+  if (!base64Content) return 0;
+  // ベース64エンコードされた文字列のバイトサイズを概算
+  // 末尾のパディング(=)は2バイトとして数えない
+  const padding = (base64Content.match(/=/g) || []).length;
+  return (base64Content.length * 0.75) - padding;
+}
+
 // アニメーション開始関数
 function startAnimation() {
   chrome.runtime.sendMessage({ type: 'startAnimationBackground' });
@@ -17,6 +26,19 @@ function stopAnimation() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // 既存のオプションページ読み込みロジックなどがある場合はここに保持
+
+  // ストレージ使用量の表示ロジックはrenderSavedAnimations内で処理されるため削除
+  // chrome.storage.local.getBytesInUse(null, (bytesInUse) => {
+  //   const usageElement = document.getElementById('storage-usage');
+  //   if (chrome.runtime.lastError) {
+  //     usageElement.textContent = 'エラー: ' + chrome.runtime.lastError.message;
+  //   } else {
+  //     const kilobytes = (bytesInUse / 1024).toFixed(2);
+  //     usageElement.textContent = `${kilobytes} KB`;
+  //   }
+  // });
+
   // chromeオブジェクトの定義状況を確認
   console.log('Options script loaded.');
   if (typeof chrome !== 'undefined') {
@@ -54,6 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 保存されたアニメーションをレンダリングする関数
   function renderSavedAnimations() {
+    let totalAnimationBytes = 0; // アニメーションの合計バイト数
     chrome.storage.local.get(['savedAnimationSets', 'currentActiveAnimationName'], (result) => {
       const savedSets = result.savedAnimationSets || {};
       const currentActiveAnimationName = result.currentActiveAnimationName || null;
@@ -123,6 +146,23 @@ document.addEventListener('DOMContentLoaded', () => {
         animationNameSpan.textContent = name;
         animationNameSpan.className = 'mr-2.5 font-bold';
 
+        // このアニメーションのサイズを計算
+        let animationSize = 0;
+        if (savedSets[name].frames) {
+          for (const frameSrc of savedSets[name].frames) {
+            const parts = frameSrc.split(',');
+            if (parts.length > 1) {
+              animationSize += estimateBase64SizeInBytes(parts[1]);
+            }
+          }
+        }
+        const animationSizeKB = (animationSize / 1024).toFixed(2); // 小数点以下2桁まで表示
+        totalAnimationBytes += animationSize; // 合計に加算
+
+        const sizeSpan = document.createElement('span');
+        sizeSpan.textContent = `Approx. ${animationSizeKB}KB`;
+        sizeSpan.className = 'text-gray-500 text-sm ml-auto'; // ラベル内で右寄せ
+
         const deleteBtn = document.createElement('button');
         deleteBtn.textContent = '削除';
         deleteBtn.className = 'px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 ml-2.5'; // Add Tailwind classes
@@ -143,10 +183,18 @@ document.addEventListener('DOMContentLoaded', () => {
         animationGroupLabel.appendChild(input);
         animationGroupLabel.appendChild(thumbnailImg);
         animationGroupLabel.appendChild(animationNameSpan);
+        animationGroupLabel.appendChild(sizeSpan); // サイズ表示をラベルに追加
 
         div.appendChild(animationGroupLabel);
         div.appendChild(deleteBtn);
         savedAnimationsList.appendChild(div);
+      }
+
+      // 全体のストレージ使用量表示をアニメーションの合計容量に更新
+      const totalAnimationKB = (totalAnimationBytes / 1024).toFixed(2); // 小数点以下2桁まで表示
+      const totalUsageElement = document.getElementById('storage-usage');
+      if (totalUsageElement) {
+        totalUsageElement.textContent = `Approx. ${totalAnimationKB}KB`;
       }
     });
   }
