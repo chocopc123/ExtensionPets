@@ -7,7 +7,7 @@
   <body class="font-sans p-5 bg-gray-100 min-h-screen">
     <div class="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-md">
       <h1 class="text-3xl font-bold mb-6 text-gray-800">アニメーション設定</h1>
-      <p class="mb-4 text-gray-700">アニメーションに使用するPNGまたはJPG画像をアップロードしてください。ファイル名は連番（例: image_0001.png, image_0002.png）である必要があります。</p>
+      <p class="mb-4 text-gray-700">アニメーションに使用するPNGまたはJPG画像をアップロードしてください。<br>ファイル名は連番（例: image_0001.png, image_0002.png）である必要があります。</p>
       
       <div class="mb-6">
         <label for="imageUpload" class="block text-sm font-medium text-gray-700 mb-2">画像ファイルの選択:</label>
@@ -36,14 +36,14 @@
       </div>
 
       <div id="saved-animations-section" class="mt-8 pt-6 border-t border-gray-200">
-        <h2 class="text-2xl font-bold mb-4 text-gray-800">保存されたアニメーション</h2>
+        <h2 class="text-2xl font-bold mb-2 text-gray-800">保存済みアニメーション</h2>
+        <div class="mb-3 flex items-center space-x-4">
+          <input type="text" id="animationNameInput" placeholder="アニメーション名を入力" class="flex-grow p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+          <button id="saveAnimationBtn" class="px-5 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">現在のアニメーションを保存</button>
+        </div>
         <div id="saved-animations-list" class="space-y-4">
           <!-- 保存されたアニメーションはここに動的に追加されます -->
           <p class="text-gray-600">保存されたアニメーションはありません。</p>
-        </div>
-        <div class="mt-6 flex items-center space-x-4">
-          <input type="text" id="animationNameInput" placeholder="アニメーション名を入力" class="flex-grow p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-          <button id="saveAnimationBtn" class="px-5 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">現在のアニメーションを保存</button>
         </div>
       </div>
     </div>

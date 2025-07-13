@@ -117,7 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
           thumbnailImg.src = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='; // 透明な1x1ピクセルGIF
         }
-        thumbnailImg.className = 'w-[35px] h-[35px] object-cover mr-2.5 border border-gray-300'; // Tailwind classes for thumbnail
+        thumbnailImg.className = 'w-[35px] h-[35px] object-cover ml-1 mr-2.5 border border-gray-300'; // Tailwind classes for thumbnail
 
         const animationNameSpan = document.createElement('span'); // Use a span for the text content
         animationNameSpan.textContent = name;
