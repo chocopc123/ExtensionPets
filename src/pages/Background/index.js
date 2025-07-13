@@ -199,14 +199,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         })
         .catch(error => console.error('Error setting initial icon from background update:', error));
     }
-  } else if (message.type === 'updateAnimationInterval') {
-    animationDisplayInterval = message.interval; // 新しいアニメーション間隔を更新
-    console.log(`バックグラウンドでアニメーション間隔を更新しました: ${animationDisplayInterval}ms`);
-    if (backgroundAnimationInterval) {
-      // アニメーションが実行中の場合、新しい間隔で再起動
-      stopBackgroundAnimation();
-      startBackgroundAnimation();
-    }
   } else if (message.type === 'getAnimationStatus') {
     sendResponse({ isAnimating: isAnimating });
   } else if (message.type === 'setAnimationStatus') {
@@ -237,7 +229,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         animationDisplayInterval = savedSets[animationName].interval;
         backgroundCurrentFrameIndex = 0; // 新しいアニメーションをロードしたら最初のフレームから
         currentActiveAnimationName = animationName;
-        chrome.storage.local.set({ currentActiveAnimationName: animationName, animationInterval: animationDisplayInterval, animationFrames: backgroundAnimationFrames, currentFrameIndex: 0 }, () => {
+        chrome.storage.local.set({ currentActiveAnimationName: animationName, animationFrames: backgroundAnimationFrames, currentFrameIndex: 0 }, () => {
           console.log(`アニメーション「${animationName}」をアクティブにしました。`);
           // 必要であればアニメーションを開始
           if (isAnimating) {
@@ -276,21 +268,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
     });
     return true; // sendResponseを非同期で呼び出すため
-  } else if (message.type === 'updateCurrentAnimationInterval') {
-    // 現在アクティブなアニメーションの速度を更新
-    const newInterval = message.interval;
-    if (currentActiveAnimationName && savedAnimationSets[currentActiveAnimationName]) {
-      savedAnimationSets[currentActiveAnimationName].interval = newInterval;
+  } else if (message.type === 'updateSavedAnimationInterval') {
+    const { animationName, interval: newInterval } = message;
+    if (savedAnimationSets[animationName]) {
+      savedAnimationSets[animationName].interval = newInterval;
       chrome.storage.local.set({ savedAnimationSets: savedAnimationSets }, () => {
-        console.log(`アクティブなアニメーション「${currentActiveAnimationName}」の速度を${newInterval}msに更新しました。`);
+        console.log(`保存済みアニメーション「${animationName}」の速度を${newInterval}msに更新しました。`);
+        sendResponse({ success: true });
       });
+      // もし更新されたアニメーションが現在アクティブなアニメーションであれば、表示速度も更新
+      if (currentActiveAnimationName === animationName) {
+        animationDisplayInterval = newInterval;
+        if (isAnimating) {
+          stopBackgroundAnimation();
+          startBackgroundAnimation();
+        }
+      }
+    } else {
+      console.error(`アニメーション「${animationName}」が見つかりませんでした。`);
+      sendResponse({ success: false });
     }
-    // 現在再生中のアニメーションの間隔も更新
-    animationDisplayInterval = newInterval;
-    if (isAnimating) {
-      stopBackgroundAnimation();
-      startBackgroundAnimation();
-    }
+    return true; // sendResponseを非同期で呼び出すため
   }
 });
 

@@ -89,12 +89,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
       for (const name in savedSets) {
         const div = document.createElement('div');
-        div.className = 'flex items-center mb-2.5'; // Tailwind classes for flex container
+        // Change from 'flex items-center mb-2.5' to 'flex flex-col mb-2.5'
+        div.className = 'flex flex-col mb-2.5 w-full'; // w-full を追加
+
+        // Create a wrapper div for the label and delete button to keep them in a row
+        const headerRowDiv = document.createElement('div');
+        headerRowDiv.className = 'flex items-center w-full gap-x-2.5'; // Full width, flex row, gap-x-2.5 を追加
 
         // Create a label to wrap the radio button, thumbnail, and text
         const animationGroupLabel = document.createElement('label');
         animationGroupLabel.htmlFor = `anim-${name}`;
-        animationGroupLabel.className = 'flex items-center cursor-pointer flex-grow'; // Tailwind classes for label
+        animationGroupLabel.className = 'flex items-center cursor-pointer flex-shrink-0 mr-auto'; // mr-auto を追加
 
         const input = document.createElement('input');
         input.type = 'radio';
@@ -117,9 +122,6 @@ document.addEventListener('DOMContentLoaded', () => {
                   img.className = 'w-[75px] h-[75px] object-cover mr-1.5'; // Tailwind classes for preview images
                   animationContainer.appendChild(img);
                 });
-                // 速度スライダーを更新
-                animationSpeedSlider.value = savedSets[name].interval;
-                currentSpeedSpan.textContent = `${savedSets[name].interval}ms`;
                 // アニメーション状態も更新
                 chrome.runtime.sendMessage({ type: 'getAnimationStatus' }, (responseStatus) => {
                   if (responseStatus && typeof responseStatus.isAnimating !== 'undefined') {
@@ -159,13 +161,57 @@ document.addEventListener('DOMContentLoaded', () => {
         const animationSizeKB = (animationSize / 1024).toFixed(2); // 小数点以下2桁まで表示
         totalAnimationBytes += animationSize; // 合計に加算
 
+        // Append elements to animationGroupLabel
+        animationGroupLabel.appendChild(input);
+        animationGroupLabel.appendChild(thumbnailImg);
+        animationGroupLabel.appendChild(animationNameSpan);
+
+        // 新しい速度コントロール用のdiv
+        const speedControlDiv = document.createElement('div');
+        speedControlDiv.className = 'flex items-center w-1/2 flex-none'; // mr-2.5 を削除
+        
+        const speedLabel = document.createElement('label');
+        speedLabel.htmlFor = `speed-${name}`;
+        speedLabel.className = 'block text-sm font-medium text-gray-700 mr-2 pl-9';
+        speedLabel.textContent = '速度:';
+        speedControlDiv.appendChild(speedLabel);
+
+        const animationSpeedSlider = document.createElement('input');
+        animationSpeedSlider.type = 'range';
+        animationSpeedSlider.id = `speed-${name}`;
+        animationSpeedSlider.min = '20';
+        animationSpeedSlider.max = '300';
+        animationSpeedSlider.step = '10';
+        animationSpeedSlider.value = savedSets[name].interval; // 保存された速度を初期値として設定
+        animationSpeedSlider.className = 'h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-lg w-full'; // w-full を維持
+        speedControlDiv.appendChild(animationSpeedSlider);
+
+        const currentSpeedSpan = document.createElement('span');
+        currentSpeedSpan.id = `currentSpeed-${name}`;
+        currentSpeedSpan.className = 'text-gray-700 font-medium ml-2';
+        currentSpeedSpan.textContent = `${savedSets[name].interval}ms`;
+        speedControlDiv.appendChild(currentSpeedSpan);
+
+        animationSpeedSlider.addEventListener('input', (event) => {
+          const newSpeed = event.target.value;
+          currentSpeedSpan.textContent = `${newSpeed}ms`;
+          // バックグラウンドスクリプトに、このアニメーションの新しい速度を送信
+          chrome.runtime.sendMessage({ type: 'updateSavedAnimationInterval', animationName: name, interval: parseInt(newSpeed, 10) }, (response) => {
+            if (response && response.success) {
+              console.log(`アニメーション「${name}」の速度を${newSpeed}msに更新しました。`);
+            } else {
+              console.error(`アニメーション「${name}」の速度更新に失敗しました。`);
+            }
+          });
+        });
+
         const sizeSpan = document.createElement('span');
         sizeSpan.textContent = `Approx. ${animationSizeKB}KB`;
-        sizeSpan.className = 'text-gray-500 text-sm ml-auto'; // ラベル内で右寄せ
+        sizeSpan.className = 'text-gray-500 text-sm'; // ml-auto を削除
 
         const deleteBtn = document.createElement('button');
         deleteBtn.textContent = '削除';
-        deleteBtn.className = 'px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 ml-2.5'; // Add Tailwind classes
+        deleteBtn.className = 'px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2'; // ml-auto を削除
         deleteBtn.addEventListener('click', () => {
           // eslint-disable-next-line no-restricted-globals
           if (confirm(`アニメーション「${name}」を本当に削除しますか？`)) {
@@ -180,13 +226,14 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         });
 
-        animationGroupLabel.appendChild(input);
-        animationGroupLabel.appendChild(thumbnailImg);
-        animationGroupLabel.appendChild(animationNameSpan);
-        animationGroupLabel.appendChild(sizeSpan); // サイズ表示をラベルに追加
+        // Append elements to headerRowDiv in desired order
+        headerRowDiv.appendChild(animationGroupLabel);
+        headerRowDiv.appendChild(speedControlDiv); // 速度コントロールをここに移動
+        headerRowDiv.appendChild(sizeSpan); // サイズ表示をここに移動
+        headerRowDiv.appendChild(deleteBtn);
 
-        div.appendChild(animationGroupLabel);
-        div.appendChild(deleteBtn);
+        // Append headerRowDiv to the main div
+        div.appendChild(headerRowDiv);
         savedAnimationsList.appendChild(div);
       }
 
@@ -353,7 +400,7 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.storage.local.set({ animationInterval: parseInt(newSpeed, 10) }, () => {
       console.log(`アニメーション速度をストレージに保存しました: ${newSpeed}ms`);
       // 現在アクティブなアニメーションの速度も更新（もしあれば）
-      chrome.runtime.sendMessage({ type: 'updateCurrentAnimationInterval', interval: parseInt(newSpeed, 10) });
+      // chrome.runtime.sendMessage({ type: 'updateCurrentAnimationInterval', interval: parseInt(newSpeed, 10) }); // この行を削除またはコメントアウト
     });
   });
 
