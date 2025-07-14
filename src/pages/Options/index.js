@@ -1,62 +1,23 @@
-// 画像のファイル名から連番を抽出するヘルパー関数
 function extractSequenceNumber(filename) {
   const match = filename.match(/_(\d+)\.(png|jpg|jpeg)$/i);
   return match ? parseInt(match[1], 10) : 0;
 }
 
-// ベース64コンテンツのバイトサイズを概算する関数
 function estimateBase64SizeInBytes(base64Content) {
   if (!base64Content) return 0;
-  // ベース64エンコードされた文字列のバイトサイズを概算
-  // 末尾のパディング(=)は2バイトとして数えない
   const padding = (base64Content.match(/=/g) || []).length;
   return (base64Content.length * 0.75) - padding;
 }
 
-// アニメーション開始関数
 function startAnimation() {
   chrome.runtime.sendMessage({ type: 'startAnimationBackground' });
-  console.log('アニメーション開始メッセージをバックグラウンドに送信しました。');
 }
 
-// アニメーション停止関数
 function stopAnimation() {
   chrome.runtime.sendMessage({ type: 'stopAnimationBackground' });
-  console.log('アニメーション停止メッセージをバックグラウンドに送信しました。');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  // 既存のオプションページ読み込みロジックなどがある場合はここに保持
-
-  // ストレージ使用量の表示ロジックはrenderSavedAnimations内で処理されるため削除
-  // chrome.storage.local.getBytesInUse(null, (bytesInUse) => {
-  //   const usageElement = document.getElementById('storage-usage');
-  //   if (chrome.runtime.lastError) {
-  //     usageElement.textContent = 'エラー: ' + chrome.runtime.lastError.message;
-  //   } else {
-  //     const kilobytes = (bytesInUse / 1024).toFixed(2);
-  //     usageElement.textContent = `${kilobytes} KB`;
-  //   }
-  // });
-
-  // chromeオブジェクトの定義状況を確認
-  console.log('Options script loaded.');
-  if (typeof chrome !== 'undefined') {
-    console.log('chrome object is defined.');
-    if (typeof chrome.storage !== 'undefined') {
-      console.log('chrome.storage is defined.');
-      if (typeof chrome.storage.local !== 'undefined') {
-        console.log('chrome.storage.local is defined.');
-      } else {
-        console.error('chrome.storage.local is undefined!');
-      }
-    } else {
-      console.error('chrome.storage is undefined!');
-    }
-  } else {
-    console.error('chrome object is undefined!');
-  }
-
   const imageUpload = document.getElementById('imageUpload');
   const toggleAnimationBtn = document.getElementById('toggleAnimation');
   const animationIcon = document.getElementById('animationIcon');
@@ -74,15 +35,14 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  let isAnimating = false; // アニメーションの状態を追跡
+  let isAnimating = false;
 
-  // 保存されたアニメーションをレンダリングする関数
   function renderSavedAnimations() {
-    let totalAnimationBytes = 0; // アニメーションの合計バイト数
+    let totalAnimationBytes = 0;
     chrome.storage.local.get(['savedAnimationSets', 'currentActiveAnimationName'], (result) => {
       const savedSets = result.savedAnimationSets || {};
       const currentActiveAnimationName = result.currentActiveAnimationName || null;
-      savedAnimationsList.innerHTML = ''; // リストをクリア
+      savedAnimationsList.innerHTML = '';
 
       if (Object.keys(savedSets).length === 0) {
         savedAnimationsList.innerHTML = '<p>保存されたアニメーションはありません。</p>';
@@ -91,17 +51,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
       for (const name in savedSets) {
         const div = document.createElement('div');
-        // Change from 'flex items-center mb-2.5' to 'flex flex-col mb-2.5'
-        div.className = 'flex flex-col mb-2.5 w-full'; // w-full を追加
+        div.className = 'flex flex-col mb-2.5 w-full';
 
-        // Create a wrapper div for the label and delete button to keep them in a row
         const headerRowDiv = document.createElement('div');
-        headerRowDiv.className = 'flex items-center w-full gap-x-2.5'; // Full width, flex row, gap-x-2.5 を追加
+        headerRowDiv.className = 'flex items-center w-full gap-x-2.5';
 
-        // Create a label to wrap the radio button, thumbnail, and text
         const animationGroupLabel = document.createElement('label');
         animationGroupLabel.htmlFor = `anim-${name}`;
-        animationGroupLabel.className = 'flex items-center cursor-pointer flex-shrink-0 mr-auto'; // mr-auto を追加
+        animationGroupLabel.className = 'flex items-center cursor-pointer flex-shrink-0 mr-auto';
 
         const input = document.createElement('input');
         input.type = 'radio';
@@ -112,26 +69,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         input.addEventListener('change', (event) => {
           if (event.target.checked) {
-            // 選択されたアニメーションをロードしてアクティブにする
             chrome.runtime.sendMessage({ type: 'loadAnimation', animationName: name }, (response) => {
               if (response && response.success) {
-                console.log(`アニメーション「${name}」をロードしました。`);
-                // 現在のプレビューを更新
                 animationContainer.innerHTML = '';
                 savedSets[name].frames.forEach(frameSrc => {
                   const img = document.createElement('img');
                   img.src = frameSrc;
-                  img.className = 'w-[75px] h-[75px] object-cover mr-1.5'; // Tailwind classes for preview images
+                  img.className = 'w-[75px] h-[75px] object-cover mr-1.5';
                   animationContainer.appendChild(img);
                 });
-                // アニメーション状態も更新
                 chrome.runtime.sendMessage({ type: 'getAnimationStatus' }, (responseStatus) => {
                   if (responseStatus && typeof responseStatus.isAnimating !== 'undefined') {
                     isAnimating = responseStatus.isAnimating;
                     animationIcon.textContent = isAnimating ? '❚❚' : '▶';
                   }
                 });
-                // ロードされたアニメーションの速度をスライダーに反映
                 animationSpeedSlider.value = savedSets[name].interval;
                 currentSpeedSpan.textContent = `${savedSets[name].interval}ms`;
               } else {
@@ -143,17 +95,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const thumbnailImg = document.createElement('img');
         if (savedSets[name].frames && savedSets[name].frames.length > 0) {
-          thumbnailImg.src = savedSets[name].frames[0]; // 最初のフレームをサムネイルとして使用
+          thumbnailImg.src = savedSets[name].frames[0];
         } else {
-          thumbnailImg.src = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='; // 透明な1x1ピクセルGIF
+          thumbnailImg.src = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
         }
-        thumbnailImg.className = 'w-[35px] h-[35px] object-cover ml-1 mr-2.5 border border-gray-300'; // Tailwind classes for thumbnail
+        thumbnailImg.className = 'w-[35px] h-[35px] object-cover ml-1 mr-2.5 border border-gray-300';
 
-        const animationNameSpan = document.createElement('span'); // Use a span for the text content
+        const animationNameSpan = document.createElement('span');
         animationNameSpan.textContent = name;
         animationNameSpan.className = 'mr-2.5 font-bold';
 
-        // このアニメーションのサイズを計算
         let animationSize = 0;
         if (savedSets[name].frames) {
           for (const frameSrc of savedSets[name].frames) {
@@ -163,17 +114,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
           }
         }
-        const animationSizeKB = (animationSize / 1024).toFixed(2); // 小数点以下2桁まで表示
-        totalAnimationBytes += animationSize; // 合計に加算
+        const animationSizeKB = (animationSize / 1024).toFixed(2);
+        totalAnimationBytes += animationSize;
 
-        // Append elements to animationGroupLabel
         animationGroupLabel.appendChild(input);
         animationGroupLabel.appendChild(thumbnailImg);
         animationGroupLabel.appendChild(animationNameSpan);
 
-        // 新しい速度コントロール用のdiv
         const speedControlDiv = document.createElement('div');
-        speedControlDiv.className = 'flex items-center w-1/2 flex-none gap-x-2.5 mr-5' // mr-2.5 を削除, gap-x-2.5 を追加
+        speedControlDiv.className = 'flex items-center w-1/2 flex-none gap-x-2.5 mr-5'
         
         const animationSpeedSlider = document.createElement('input');
         animationSpeedSlider.type = 'range';
@@ -181,23 +130,21 @@ document.addEventListener('DOMContentLoaded', () => {
         animationSpeedSlider.min = '20';
         animationSpeedSlider.max = '300';
         animationSpeedSlider.step = '10';
-        animationSpeedSlider.value = savedSets[name].interval; // 保存された速度を初期値として設定
-        animationSpeedSlider.className = 'h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-lg w-full'; // w-full を維持
+        animationSpeedSlider.value = savedSets[name].interval;
+        animationSpeedSlider.className = 'h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-lg w-full';
         speedControlDiv.appendChild(animationSpeedSlider);
 
         const currentSpeedSpan = document.createElement('span');
         currentSpeedSpan.id = `currentSpeed-${name}`;
-        currentSpeedSpan.className = 'text-gray-700 font-medium'; // ml-2 を削除
+        currentSpeedSpan.className = 'text-gray-700 font-medium';
         currentSpeedSpan.textContent = `${savedSets[name].interval}ms`;
         speedControlDiv.appendChild(currentSpeedSpan);
 
         animationSpeedSlider.addEventListener('input', (event) => {
           const newSpeed = event.target.value;
           currentSpeedSpan.textContent = `${newSpeed}ms`;
-          // バックグラウンドスクリプトに、このアニメーションの新しい速度を送信
           chrome.runtime.sendMessage({ type: 'updateSavedAnimationInterval', animationName: name, interval: parseInt(newSpeed, 10) }, (response) => {
             if (response && response.success) {
-              console.log(`アニメーション「${name}」の速度を${newSpeed}msに更新しました。`);
             } else {
               console.error(`アニメーション「${name}」の速度更新に失敗しました。`);
             }
@@ -212,12 +159,10 @@ document.addEventListener('DOMContentLoaded', () => {
         deleteBtn.textContent = '削除';
         deleteBtn.className = 'px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2';
         deleteBtn.addEventListener('click', () => {
-          // eslint-disable-next-line no-restricted-globals
           if (confirm(`アニメーション「${name}」を本当に削除しますか？`)) {
             chrome.runtime.sendMessage({ type: 'deleteAnimation', animationName: name }, (response) => {
               if (response && response.success) {
-                console.log(`アニメーション「${name}」を削除しました。`);
-                renderSavedAnimations(); // リストを再レンダリング
+                renderSavedAnimations();
               } else {
                 console.error(`アニメーション「${name}」の削除に失敗しました。`);
               }
@@ -225,19 +170,16 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         });
 
-        // Append elements to headerRowDiv in desired order
         headerRowDiv.appendChild(animationGroupLabel);
-        headerRowDiv.appendChild(speedControlDiv); // 速度コントロールをここに移動
-        headerRowDiv.appendChild(sizeSpan); // サイズ表示をここに移動
+        headerRowDiv.appendChild(speedControlDiv);
+        headerRowDiv.appendChild(sizeSpan);
         headerRowDiv.appendChild(deleteBtn);
 
-        // Append headerRowDiv to the main div
         div.appendChild(headerRowDiv);
         savedAnimationsList.appendChild(div);
       }
 
-      // 全体のストレージ使用量表示をアニメーションの合計容量に更新
-      const totalAnimationKB = (totalAnimationBytes / 1024).toFixed(2); // 小数点以下2桁まで表示
+      const totalAnimationKB = (totalAnimationBytes / 1024).toFixed(2);
       const totalUsageElement = document.getElementById('storage-usage');
       if (totalUsageElement) {
         totalUsageElement.textContent = `Approx. ${totalAnimationKB}KB`;
@@ -245,7 +187,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // バックグラウンドスクリプトから現在のアニメーション状態を取得し、ボタンを初期化
   chrome.runtime.sendMessage({ type: 'getAnimationStatus' }, (response) => {
     if (response && typeof response.isAnimating !== 'undefined') {
       isAnimating = response.isAnimating;
@@ -253,34 +194,29 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // UI表示用にchrome.storageから保存されたアニメーションフレームと現在のフレームインデックスをロード
   chrome.storage.local.get(['animationFrames', 'currentFrameIndex'], (result) => {
     if (result.animationFrames && result.animationFrames.length > 0) {
       const animationFramesFromStorage = result.animationFrames;
-      // animationContainerをクリアして、すべてのフレームを表示
       animationContainer.innerHTML = '';
       animationFramesFromStorage.forEach(frameSrc => {
         const img = document.createElement('img');
         img.src = frameSrc;
-        img.style.width = '75px'; // 画像サイズを大きく
-        img.style.height = '75px'; // 画像サイズを大きく
-        img.style.objectFit = 'cover'; // アスペクト比を保ちつつ表示
-        img.style.marginRight = '5px'; // 必要に応じてマージンを追加
+        img.style.width = '75px';
+        img.style.height = '75px';
+        img.style.objectFit = 'cover';
+        img.style.marginRight = '5px';
         animationContainer.appendChild(img);
       });
     }
   });
 
-  // アニメーション速度の設定をロード
   chrome.storage.local.get(['animationInterval'], (result) => {
-    const savedInterval = result.animationInterval !== undefined ? result.animationInterval : 100; // デフォルト値は100ms
+    const savedInterval = result.animationInterval !== undefined ? result.animationInterval : 100;
     animationSpeedSlider.value = savedInterval;
     currentSpeedSpan.textContent = `${savedInterval}ms`;
   });
 
-  // ファイルアップロードの処理
   imageUpload.addEventListener('change', (event) => {
-    // ファイル名から連番を抜いた部分を抽出するヘルパー関数
     function extractBaseName(filename) {
       const parts = filename.split('.');
       if (parts.length > 1) {
@@ -292,11 +228,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const files = Array.from(event.target.files);
-    // ファイルを連番でソート
     files.sort((a, b) => {
       const numA = extractSequenceNumber(a.name);
       const numB = extractSequenceNumber(b.name);
-      return numA - numB; // 昇順にソート
+      return numA - numB;
     });
 
     const fileReadPromises = files.map(file => {
@@ -310,78 +245,61 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     Promise.all(fileReadPromises).then(newAnimationFrames => {
-      // 全ての画像が読み込まれたら、バックグラウンドスクリプトにフレームデータを送信
       chrome.runtime.sendMessage({ type: 'updateFramesPreview', animationFrames: newAnimationFrames }, () => {
-        console.log('アニメーションフレームをバックグラウンドに送信しました。(プレビュー用)');
-        // オプションページのUIにすべてのフレームを表示
-        animationContainer.innerHTML = ''; // 古い画像をクリア
+        animationContainer.innerHTML = '';
         newAnimationFrames.forEach(frameSrc => {
           const img = document.createElement('img');
           img.src = frameSrc;
-          img.style.width = '75px'; // 画像サイズを大きく
-          img.style.height = '75px'; // 画像サイズを大きく
-          img.style.objectFit = 'cover'; // アスペクト比を保ちつつ表示
-          img.style.marginRight = '5px'; // 必要に応じてマージンを追加
+          img.style.width = '75px';
+          img.style.height = '75px';
+          img.style.objectFit = 'cover';
+          img.style.marginRight = '5px';
           animationContainer.appendChild(img);
         });
-        // アニメーション速度スライダーの値を現在の値に設定
-        // 新規アップロード時は常に100msをデフォルトとする
         const currentInterval = 100;
         animationSpeedSlider.value = currentInterval;
         currentSpeedSpan.textContent = `${currentInterval}ms`;
-        // ストレージにも100msを保存
         chrome.storage.local.set({ animationInterval: currentInterval });
 
-        // モーダルを表示し、プレースホルダーを設定
         animationNameModal.classList.remove('hidden');
         if (files.length > 0) {
           const firstFileName = files[0].name;
           const baseName = extractBaseName(firstFileName);
-          modalAnimationNameInput.value = baseName; // プレースホルダーではなく、直接値を設定
+          modalAnimationNameInput.value = baseName;
         } else {
           modalAnimationNameInput.value = '';
         }
-        modalAnimationNameInput.focus(); // 入力フィールドにフォーカス
+        modalAnimationNameInput.focus();
       });
-      // 同じファイルを再度選択できるように、inputの値をクリア
       event.target.value = '';
     });
   });
 
-  // モーダル内の保存ボタンのイベントリスナー
   confirmSaveAnimationBtn.addEventListener('click', () => {
     const animationName = modalAnimationNameInput.value.trim();
     if (animationName) {
-      // 現在のプレビューフレームと速度を取得して保存
       chrome.storage.local.get(['currentPreviewFrames', 'animationInterval', 'savedAnimationSets'], (result) => {
         const framesToSave = result.currentPreviewFrames || [];
-        const intervalToSave = result.animationInterval !== undefined ? result.animationInterval : 100; // デフォルトを100msに
+        const intervalToSave = result.animationInterval !== undefined ? result.animationInterval : 100;
         const existingSets = result.savedAnimationSets || {};
 
         if (framesToSave.length > 0) {
           if (existingSets[animationName]) {
-            // 同一名のアニメーションが既に存在する場合、確認ポップアップを表示
-            // eslint-disable-next-line no-restricted-globals
             if (!confirm(`アニメーション「${animationName}」は既に存在します。上書きしますか？`)) {
-              console.log('アニメーションの保存がキャンセルされました。');
-              return; // ユーザーがキャンセルした場合、処理を中断
+              return;
             }
           }
 
           chrome.runtime.sendMessage({ type: 'saveAnimation', animationName: animationName, animationFrames: framesToSave, animationInterval: intervalToSave }, (response) => {
             if (response && response.success) {
-              console.log(`アニメーション「${animationName}」を保存しました。`);
-              modalAnimationNameInput.value = ''; // 入力フィールドをクリア
-              animationNameModal.classList.add('hidden'); // モーダルを非表示にする
-              renderSavedAnimations(); // 保存されたリストを再レンダリング
+              modalAnimationNameInput.value = '';
+              animationNameModal.classList.add('hidden');
+              renderSavedAnimations();
 
-              // 保存後、上書きされたアニメーションを再度ロードして表示を更新
               chrome.runtime.sendMessage({ type: 'loadAnimation', animationName: animationName }, (loadResponse) => {
                 if (loadResponse && loadResponse.success) {
-                  console.log(`アニメーション「${animationName}」を再ロードし、表示を更新しました。`);
-                  // 新しく保存されたアニメーションを自動的に選択
                   chrome.storage.local.set({ currentActiveAnimationName: animationName }, () => {
-                    renderSavedAnimations(); // 再レンダリングして選択状態を更新
+                    renderSavedAnimations();
                   });
                 } else {
                   console.error(`アニメーション「${animationName}」の再ロードに失敗しました。`);
@@ -401,21 +319,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // モーダル内のキャンセルボタンのイベントリスナー
   cancelSaveAnimationBtn.addEventListener('click', () => {
-    animationNameModal.classList.add('hidden'); // モーダルを非表示にする
-    modalAnimationNameInput.value = ''; // 入力フィールドをクリア
+    animationNameModal.classList.add('hidden');
+    modalAnimationNameInput.value = '';
   });
 
-  // モーダルの背景をクリックしたときにモーダルを閉じる
   animationNameModal.addEventListener('click', (event) => {
     if (event.target === animationNameModal) {
       animationNameModal.classList.add('hidden');
-      modalAnimationNameInput.value = ''; // 入力フィールドをクリア
+      modalAnimationNameInput.value = '';
     }
   });
 
-  // トグルボタンクリックイベントリスナー
   toggleAnimationBtn.addEventListener('click', () => {
     if (isAnimating) {
       stopAnimation();
@@ -430,22 +345,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // アニメーション速度スライダーのイベントリスナー
   animationSpeedSlider.addEventListener('input', (event) => {
     const newSpeed = event.target.value;
     currentSpeedSpan.textContent = `${newSpeed}ms`;
-    // バックグラウンドスクリプトに新しい速度を送信
     chrome.runtime.sendMessage({ type: 'updateAnimationInterval', interval: parseInt(newSpeed, 10) }, () => {
-      console.log(`アニメーション速度をバックグラウンドに送信しました: ${newSpeed}ms`);
     });
-    // ストレージに速度を保存
     chrome.storage.local.set({ animationInterval: parseInt(newSpeed, 10) }, () => {
-      console.log(`アニメーション速度をストレージに保存しました: ${newSpeed}ms`);
-      // 現在アクティブなアニメーションの速度も更新（もしあれば）
-      // chrome.runtime.sendMessage({ type: 'updateCurrentAnimationInterval', interval: parseInt(newSpeed, 10) }); // この行を削除またはコメントアウト
     });
   });
 
-  // ページロード時に保存されたアニメーションをロードして表示
   renderSavedAnimations();
 });
