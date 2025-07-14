@@ -31,9 +31,9 @@ var server = new WebpackDevServer(
     hot: true,
     liveReload: false,
     client: {
-      webSocketTransport: 'sockjs',
+      // webSocketTransport: 'sockjs', // sockjsは非推奨のため削除
     },
-    webSocketServer: 'sockjs',
+    // webSocketServer: 'sockjs', // sockjsは非推奨のため削除
     host: 'localhost',
     port: env.PORT,
     static: {
