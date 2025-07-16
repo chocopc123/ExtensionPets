@@ -22,15 +22,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const toggleAnimationBtn = document.getElementById('toggleAnimation') as HTMLButtonElement;
   const animationIcon = document.getElementById('animationIcon') as HTMLSpanElement;
   const animationContainer = document.getElementById('animation-container') as HTMLDivElement;
-  const animationSpeedSlider = document.getElementById('animationSpeed') as HTMLInputElement;
-  const currentSpeedSpan = document.getElementById('currentSpeed') as HTMLSpanElement;
   const savedAnimationsList = document.getElementById('saved-animations-list') as HTMLDivElement;
   const animationNameModal = document.getElementById('animationNameModal') as HTMLDivElement;
   const modalAnimationNameInput = document.getElementById('modalAnimationNameInput') as HTMLInputElement;
   const cancelSaveAnimationBtn = document.getElementById('cancelSaveAnimationBtn') as HTMLButtonElement;
   const confirmSaveAnimationBtn = document.getElementById('confirmSaveAnimationBtn') as HTMLButtonElement;
 
-  if (!imageUpload || !toggleAnimationBtn || !animationIcon || !animationContainer || !animationSpeedSlider || !currentSpeedSpan || !savedAnimationsList || !animationNameModal || !modalAnimationNameInput || !cancelSaveAnimationBtn || !confirmSaveAnimationBtn) {
+  if (!imageUpload || !toggleAnimationBtn || !animationIcon || !animationContainer || !savedAnimationsList || !animationNameModal || !modalAnimationNameInput || !cancelSaveAnimationBtn || !confirmSaveAnimationBtn) {
     console.error("必要なDOM要素が見つかりませんでした。HTMLファイルを確認してください。");
     return;
   }
@@ -94,8 +92,6 @@ interface AnimationSet {
                     animationIcon.textContent = isAnimating ? '❚❚' : '▶';
                   }
                 });
-                animationSpeedSlider.value = savedSets[name].interval.toString();
-                currentSpeedSpan.textContent = `${savedSets[name].interval}ms`;
               } else {
                 console.error(`アニメーション「${name}」のロードに失敗しました。`);
               }
@@ -222,10 +218,7 @@ interface AnimationSet {
     }
   });
 
-  chrome.storage.local.get(['animationInterval', 'currentActiveAnimationName'], (result: { animationInterval?: number, currentActiveAnimationName?: string }) => {
-    const savedInterval = result.animationInterval !== undefined ? result.animationInterval : 100;
-    animationSpeedSlider.value = savedInterval.toString();
-    currentSpeedSpan.textContent = `${savedInterval}ms`;
+  chrome.storage.local.get(['currentActiveAnimationName'], (result: { currentActiveAnimationName?: string }) => {
     currentActiveAnimationName = result.currentActiveAnimationName || null;
   });
 
@@ -271,10 +264,7 @@ interface AnimationSet {
           img.style.marginRight = '5px';
           animationContainer.appendChild(img);
         });
-        const currentInterval = 100;
-        animationSpeedSlider.value = currentInterval.toString();
-        currentSpeedSpan.textContent = `${currentInterval}ms`;
-        chrome.storage.local.set({ animationInterval: currentInterval, currentActiveAnimationName: null }, () => {
+        chrome.storage.local.set({ currentActiveAnimationName: null }, () => {
           animationNameModal.classList.remove('hidden');
           if (files.length > 0) {
             const firstFileName = files[0].name;
@@ -364,25 +354,6 @@ interface AnimationSet {
     }
   });
 
-  animationSpeedSlider.addEventListener('input', (event: Event) => {
-    const target = event.target as HTMLInputElement;
-    const newSpeed = target.value;
-    currentSpeedSpan.textContent = `${newSpeed}ms`;
-    if (currentActiveAnimationName) {
-      chrome.runtime.sendMessage({ type: 'updateSavedAnimationInterval', animationName: currentActiveAnimationName, interval: parseInt(newSpeed, 10) }, (response: { success: boolean }) => {
-        if (!response || !response.success) {
-          console.error(`アニメーション「${currentActiveAnimationName}」の速度更新に失敗しました。`);
-        }
-      });
-    } else {
-      // アクティブなアニメーションがない場合、animationIntervalを直接更新
-      chrome.runtime.sendMessage({ type: 'updateAnimationInterval', interval: parseInt(newSpeed, 10) }, (response: { success: boolean }) => {
-        if (!response || !response.success) {
-          console.error(`アニメーション速度の更新に失敗しました。`);
-        }
-      });
-    }
-  });
 
   renderSavedAnimations();
 });
