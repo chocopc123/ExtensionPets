@@ -9,14 +9,6 @@ function estimateBase64SizeInBytes(base64Content: string | null): number {
   return (base64Content.length * 0.75) - padding;
 }
 
-function startAnimation(): void {
-  chrome.runtime.sendMessage({ type: 'startAnimationBackground' });
-}
-
-function stopAnimation(): void {
-  chrome.runtime.sendMessage({ type: 'stopAnimationBackground' });
-}
-
 interface AnimationSet {
   frames: string[];
   interval: number;
@@ -24,8 +16,6 @@ interface AnimationSet {
 
 interface DOMCache {
   imageUpload: HTMLInputElement;
-  toggleAnimationBtn: HTMLButtonElement;
-  animationIcon: HTMLSpanElement;
   animationContainer: HTMLDivElement;
   savedAnimationsList: HTMLDivElement;
   animationNameModal: HTMLDivElement;
@@ -39,8 +29,6 @@ let dom: DOMCache;
 
 function getDOMReferences(): DOMCache | null {
   const imageUpload = document.getElementById('imageUpload') as HTMLInputElement;
-  const toggleAnimationBtn = document.getElementById('toggleAnimation') as HTMLButtonElement;
-  const animationIcon = document.getElementById('animationIcon') as HTMLSpanElement;
   const animationContainer = document.getElementById('animation-container') as HTMLDivElement;
   const savedAnimationsList = document.getElementById('saved-animations-list') as HTMLDivElement;
   const animationNameModal = document.getElementById('animationNameModal') as HTMLDivElement;
@@ -49,14 +37,12 @@ function getDOMReferences(): DOMCache | null {
   const confirmSaveAnimationBtn = document.getElementById('confirmSaveAnimationBtn') as HTMLButtonElement;
   const totalUsageElement = document.getElementById('storage-usage') as HTMLSpanElement;
 
-  if (!imageUpload || !toggleAnimationBtn || !animationIcon || !animationContainer || !savedAnimationsList || !animationNameModal || !modalAnimationNameInput || !cancelSaveAnimationBtn || !confirmSaveAnimationBtn || !totalUsageElement) {
+  if (!imageUpload || !animationContainer || !savedAnimationsList || !animationNameModal || !modalAnimationNameInput || !cancelSaveAnimationBtn || !confirmSaveAnimationBtn || !totalUsageElement) {
     console.error("必要なDOM要素が見つかりませんでした。HTMLファイルを確認してください。");
     return null;
   }
   return {
     imageUpload,
-    toggleAnimationBtn,
-    animationIcon,
     animationContainer,
     savedAnimationsList,
     animationNameModal,
@@ -65,10 +51,6 @@ function getDOMReferences(): DOMCache | null {
     confirmSaveAnimationBtn,
     totalUsageElement
   };
-}
-
-function updateAnimationStatusUI(animationIcon: HTMLSpanElement, animating: boolean): void {
-  animationIcon.textContent = animating ? '❚❚' : '▶';
 }
 
 function renderAnimationFrames(frames: string[], container: HTMLDivElement): void {
@@ -81,30 +63,12 @@ function renderAnimationFrames(frames: string[], container: HTMLDivElement): voi
   });
 }
 
-function loadCurrentAnimationState(animationIcon: HTMLSpanElement, animationContainer: HTMLDivElement, updateUI: (animating: boolean) => void): void {
-  chrome.runtime.sendMessage({ type: 'getAnimationStatus' }, (response: { isAnimating: boolean }) => {
-    if (response && typeof response.isAnimating !== 'undefined') {
-      updateUI(response.isAnimating);
-    }
-  });
-
+function loadCurrentAnimationState(animationContainer: HTMLDivElement): void {
   chrome.storage.local.get(['animationFrames', 'currentFrameIndex'], (result: { animationFrames?: string[]; currentFrameIndex?: number }) => {
     if (result.animationFrames && result.animationFrames.length > 0) {
       renderAnimationFrames(result.animationFrames, animationContainer);
     }
   });
-}
-
-function handleToggleAnimation(isAnimating: boolean, animationIcon: HTMLSpanElement, updateUI: (animating: boolean) => void): void {
-  if (isAnimating) {
-    stopAnimation();
-    updateUI(false);
-    chrome.runtime.sendMessage({ type: 'setAnimationStatus', isAnimating: false });
-  } else {
-    startAnimation();
-    updateUI(true);
-    chrome.runtime.sendMessage({ type: 'setAnimationStatus', isAnimating: true });
-  }
 }
 
 function extractBaseName(filename: string): string {
@@ -218,7 +182,7 @@ function handleAnimationModalClick(event: MouseEvent, animationNameModal: HTMLDi
   }
 }
 
-function createAnimationListItem(name: string, animationSet: AnimationSet, currentActiveAnimationName: string | null, animationContainer: HTMLDivElement, updateAnimationStatusUI: (animationIcon: HTMLSpanElement, animating: boolean) => void, renderAnimationFrames: (frames: string[], container: HTMLDivElement) => void, estimateBase64SizeInBytes: (base64Content: string | null) => number, renderSavedAnimations: () => void, animationIcon: HTMLSpanElement): HTMLDivElement {
+function createAnimationListItem(name: string, animationSet: AnimationSet, currentActiveAnimationName: string | null, animationContainer: HTMLDivElement, renderAnimationFrames: (frames: string[], container: HTMLDivElement) => void, estimateBase64SizeInBytes: (base64Content: string | null) => number, renderSavedAnimations: () => void): HTMLDivElement {
   const div = document.createElement('div');
   div.className = 'flex flex-col mb-2.5 w-full';
 
@@ -242,11 +206,6 @@ function createAnimationListItem(name: string, animationSet: AnimationSet, curre
       chrome.runtime.sendMessage({ type: 'loadAnimation', animationName: name }, (response: { success: boolean }) => {
         if (response && response.success) {
           renderAnimationFrames(animationSet.frames, animationContainer);
-          chrome.runtime.sendMessage({ type: 'getAnimationStatus' }, (responseStatus: { isAnimating: boolean }) => {
-            if (responseStatus && typeof responseStatus.isAnimating !== 'undefined') {
-              updateAnimationStatusUI(animationIcon, responseStatus.isAnimating);
-            }
-          });
         } else {
           console.error(`アニメーション「${name}」のロードに失敗しました。`);
         }
@@ -357,7 +316,7 @@ function renderSavedAnimations(): void {
 
     for (const name in savedSets) {
       const animationSet = savedSets[name];
-      const listItem = createAnimationListItem(name, animationSet, currentActiveAnimationName, dom.animationContainer, updateAnimationStatusUI, renderAnimationFrames, estimateBase64SizeInBytes, renderSavedAnimations, dom.animationIcon);
+      const listItem = createAnimationListItem(name, animationSet, currentActiveAnimationName, dom.animationContainer, renderAnimationFrames, estimateBase64SizeInBytes, renderSavedAnimations);
       dom.savedAnimationsList.appendChild(listItem);
 
       let animationSize: number = 0;
@@ -386,19 +345,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   dom = references;
 
-  let isAnimating: boolean = false;
-  let currentActiveAnimationName: string | null = null;
-
-  const updateUIAnimationStatus = (animating: boolean) => {
-    isAnimating = animating;
-    updateAnimationStatusUI(dom.animationIcon, animating);
-  };
-
-  loadCurrentAnimationState(dom.animationIcon, dom.animationContainer, updateUIAnimationStatus);
+  loadCurrentAnimationState(dom.animationContainer);
   renderSavedAnimations();
 
   dom.imageUpload.addEventListener('change', (event) => handleImageUpload(event, dom.animationContainer, dom.animationNameModal, dom.modalAnimationNameInput, renderAnimationFrames, extractSequenceNumber, extractBaseName));
-  dom.toggleAnimationBtn.addEventListener('click', () => handleToggleAnimation(isAnimating, dom.animationIcon, updateUIAnimationStatus));
   dom.confirmSaveAnimationBtn.addEventListener('click', () => handleConfirmSaveAnimation(dom.modalAnimationNameInput, dom.animationNameModal, renderSavedAnimations));
   dom.cancelSaveAnimationBtn.addEventListener('click', () => handleCancelSaveAnimation(dom.modalAnimationNameInput, dom.animationNameModal));
   dom.animationNameModal.addEventListener('click', (event) => handleAnimationModalClick(event, dom.animationNameModal, dom.modalAnimationNameInput));

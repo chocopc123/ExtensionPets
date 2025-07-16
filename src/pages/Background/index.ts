@@ -11,7 +11,6 @@ interface BackgroundState {
   currentFrameIndex: number;
   animationFrames: string[];
   displayInterval: number;
-  isAnimating: boolean;
   savedAnimationSets: { [key: string]: AnimationSet };
   currentActiveAnimationName: string | null;
   currentPreviewFrames: string[];
@@ -22,7 +21,6 @@ const state: BackgroundState = {
   currentFrameIndex: 0,
   animationFrames: [],
   displayInterval: 200,
-  isAnimating: false,
   savedAnimationSets: {},
   currentActiveAnimationName: null,
   currentPreviewFrames: [],
@@ -59,47 +57,14 @@ function createKeepAliveAlarm(): void {
   });
 }
 
-function startBackgroundAnimation(): void {
-  if (state.animationFrames.length === 0) {
-    return;
-  }
-
-  if (state.animationInterval) {
-    clearInterval(state.animationInterval);
-  }
-
-  state.isAnimating = true;
-  chrome.storage.local.set({ isAnimating: true });
-
-  drawIcon(state.animationFrames[state.currentFrameIndex]);
-
-  state.animationInterval = setInterval(() => {
-    state.currentFrameIndex = (state.currentFrameIndex + 1) % state.animationFrames.length;
-    drawIcon(state.animationFrames[state.currentFrameIndex]);
-  }, state.displayInterval);
-}
-
-function stopBackgroundAnimation(): void {
-  if (state.animationInterval) {
-    clearInterval(state.animationInterval);
-    state.animationInterval = null;
-  }
-  state.isAnimating = false;
-  chrome.storage.local.set({ isAnimating: false });
-  chrome.alarms.clear(KEEP_ALIVE_ALARM_NAME, (wasCleared: boolean) => {
-    // console.log('Keep alive alarm cleared:', wasCleared);
-  });
-}
-
 async function loadAnimationStateFromStorage(): Promise<void> {
-  const result = await chrome.storage.local.get(['animationFrames', 'currentFrameIndex', 'animationInterval', 'isAnimating', 'savedAnimationSets', 'currentActiveAnimationName']);
+  const result = await chrome.storage.local.get(['animationFrames', 'currentFrameIndex', 'animationInterval', 'savedAnimationSets', 'currentActiveAnimationName']);
 
   state.savedAnimationSets = result.savedAnimationSets || {};
   state.currentActiveAnimationName = result.currentActiveAnimationName || null;
 
   let framesToLoad: string[] = [];
   let intervalToLoad: number = result.animationInterval || 200;
-  let shouldAnimate: boolean = result.isAnimating || false;
 
   if (state.currentActiveAnimationName && state.savedAnimationSets[state.currentActiveAnimationName]) {
     framesToLoad = state.savedAnimationSets[state.currentActiveAnimationName].frames;
@@ -112,15 +77,26 @@ async function loadAnimationStateFromStorage(): Promise<void> {
     state.animationFrames = framesToLoad;
     state.currentFrameIndex = result.currentFrameIndex || 0;
     state.displayInterval = intervalToLoad;
-    state.isAnimating = shouldAnimate;
-
-    if (state.isAnimating) {
-      startBackgroundAnimation();
-      createKeepAliveAlarm();
-    } else {
-      drawIcon(state.animationFrames[state.currentFrameIndex]);
-    }
+    startAnimation();
+    createKeepAliveAlarm();
   }
+}
+
+function startAnimation(): void {
+  if (state.animationFrames.length === 0) {
+    return;
+  }
+
+  if (state.animationInterval) {
+    clearInterval(state.animationInterval);
+  }
+
+  drawIcon(state.animationFrames[state.currentFrameIndex]);
+
+  state.animationInterval = setInterval(() => {
+    state.currentFrameIndex = (state.currentFrameIndex + 1) % state.animationFrames.length;
+    drawIcon(state.animationFrames[state.currentFrameIndex]);
+  }, state.displayInterval);
 }
 
 // Message Handlers
@@ -128,32 +104,11 @@ function handleUpdateIcon(message: any): void {
   drawIcon(message.imageData);
 }
 
-function handleStartAnimationBackground(): void {
-  startBackgroundAnimation();
-  createKeepAliveAlarm();
-}
-
-function handleStopAnimationBackground(): void {
-  stopBackgroundAnimation();
-}
-
 function handleUpdateFrames(message: any): void {
   state.animationFrames = message.animationFrames;
-  if (state.animationInterval) {
-    stopBackgroundAnimation();
-    startBackgroundAnimation();
-  } else if (state.animationFrames.length > 0) {
-    drawIcon(state.animationFrames[0]);
+  if (state.animationFrames.length > 0) {
+    startAnimation();
   }
-}
-
-function handleGetAnimationStatus(sendResponse: (response?: any) => void): void {
-  sendResponse({ isAnimating: state.isAnimating });
-}
-
-function handleSetAnimationStatus(message: any): void {
-  state.isAnimating = message.isAnimating;
-  chrome.storage.local.set({ isAnimating: state.isAnimating });
 }
 
 function handleUpdateFramesPreview(message: any, sendResponse: (response?: any) => void): boolean {
@@ -188,9 +143,7 @@ function handleLoadAnimation(message: any, sendResponse: (response?: any) => voi
       state.currentActiveAnimationName = animationName;
       state.savedAnimationSets = savedSets;
       chrome.storage.local.set({ currentActiveAnimationName: animationName, animationFrames: state.animationFrames, currentFrameIndex: 0 }, () => {
-        if (state.isAnimating) {
-          startBackgroundAnimation();
-        }
+        startAnimation();
         sendResponse({ success: true });
       });
     } else {
@@ -212,7 +165,9 @@ function handleDeleteAnimation(message: any, sendResponse: (response?: any) => v
       const updates: { savedAnimationSets: { [key: string]: AnimationSet }; currentActiveAnimationName?: string | null } = { savedAnimationSets: existingSets };
       if (activeName === animationName) {
         updates.currentActiveAnimationName = null;
-        stopBackgroundAnimation();
+        clearInterval(state.animationInterval);
+        state.animationInterval = null;
+        chrome.alarms.clear(KEEP_ALIVE_ALARM_NAME);
       }
       chrome.storage.local.set(updates, () => {
         state.savedAnimationSets = existingSets;
@@ -238,10 +193,7 @@ function handleUpdateSavedAnimationInterval(message: any, sendResponse: (respons
       });
       if (state.currentActiveAnimationName === animationName) {
         state.displayInterval = newInterval;
-        if (state.isAnimating) {
-          stopBackgroundAnimation();
-          startBackgroundAnimation();
-        }
+        startAnimation();
       }
     } else {
       console.error(`アニメーション「${animationName}」が見つかりませんでした。`);
@@ -257,10 +209,7 @@ function handleUpdateAnimationInterval(message: any, sendResponse: (response?: a
   chrome.storage.local.set({ animationInterval: newInterval }, () => {
     sendResponse({ success: true });
   });
-  if (state.isAnimating) {
-    stopBackgroundAnimation();
-    startBackgroundAnimation();
-  }
+  startAnimation();
   return true;
 }
 
@@ -277,20 +226,8 @@ chrome.runtime.onMessage.addListener((message: any, sender: chrome.runtime.Messa
     case 'updateIcon':
       handleUpdateIcon(message);
       break;
-    case 'startAnimationBackground':
-      handleStartAnimationBackground();
-      break;
-    case 'stopAnimationBackground':
-      handleStopAnimationBackground();
-      break;
     case 'updateFrames':
       handleUpdateFrames(message);
-      break;
-    case 'getAnimationStatus':
-      handleGetAnimationStatus(sendResponse);
-      break;
-    case 'setAnimationStatus':
-      handleSetAnimationStatus(message);
       break;
     case 'updateFramesPreview':
       return handleUpdateFramesPreview(message, sendResponse);
