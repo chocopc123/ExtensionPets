@@ -274,17 +274,17 @@ interface AnimationSet {
         const currentInterval = 100;
         animationSpeedSlider.value = currentInterval.toString();
         currentSpeedSpan.textContent = `${currentInterval}ms`;
-        chrome.storage.local.set({ animationInterval: currentInterval });
-
-        animationNameModal.classList.remove('hidden');
-        if (files.length > 0) {
-          const firstFileName = files[0].name;
-          const baseName = extractBaseName(firstFileName);
-          modalAnimationNameInput.value = baseName;
-        } else {
-          modalAnimationNameInput.value = '';
-        }
-        modalAnimationNameInput.focus();
+        chrome.storage.local.set({ animationInterval: currentInterval, currentActiveAnimationName: null }, () => {
+          animationNameModal.classList.remove('hidden');
+          if (files.length > 0) {
+            const firstFileName = files[0].name;
+            const baseName = extractBaseName(firstFileName);
+            modalAnimationNameInput.value = baseName;
+          } else {
+            modalAnimationNameInput.value = '';
+          }
+          modalAnimationNameInput.focus();
+        });
       });
       target.value = '';
     });
@@ -314,7 +314,6 @@ interface AnimationSet {
             if (response && response.success) {
               modalAnimationNameInput.value = '';
               animationNameModal.classList.add('hidden');
-              renderSavedAnimations();
 
               chrome.runtime.sendMessage({ type: 'loadAnimation', animationName: animationName }, (loadResponse: { success: boolean }) => {
                 if (loadResponse && loadResponse.success) {
@@ -377,7 +376,10 @@ interface AnimationSet {
       });
     } else {
       // アクティブなアニメーションがない場合、animationIntervalを直接更新
-      chrome.storage.local.set({ animationInterval: parseInt(newSpeed, 10) }, () => {
+      chrome.runtime.sendMessage({ type: 'updateAnimationInterval', interval: parseInt(newSpeed, 10) }, (response: { success: boolean }) => {
+        if (!response || !response.success) {
+          console.error(`アニメーション速度の更新に失敗しました。`);
+        }
       });
     }
   });

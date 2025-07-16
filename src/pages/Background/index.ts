@@ -1,7 +1,7 @@
 const canvas: OffscreenCanvas = new OffscreenCanvas(32, 32);
 const ctx: OffscreenCanvasRenderingContext2D | null = canvas.getContext('2d');
 
-let backgroundAnimationInterval: NodeJS.Timeout | null = null;
+let backgroundAnimationInterval: number | null = null;
 let backgroundCurrentFrameIndex: number = 0;
 let backgroundAnimationFrames: string[] = [];
 let animationDisplayInterval: number = 200;
@@ -207,6 +207,7 @@ chrome.runtime.onMessage.addListener((message: any, sender: chrome.runtime.Messa
       const existingSets = result.savedAnimationSets || {};
       existingSets[animationName] = { frames: animationFrames, interval: animationInterval };
       chrome.storage.local.set({ savedAnimationSets: existingSets }, () => {
+        savedAnimationSets = existingSets; // グローバル変数も更新
         sendResponse({ success: true });
       });
     });
@@ -220,6 +221,7 @@ chrome.runtime.onMessage.addListener((message: any, sender: chrome.runtime.Messa
         animationDisplayInterval = savedSets[animationName].interval;
         backgroundCurrentFrameIndex = 0;
         currentActiveAnimationName = animationName;
+        savedAnimationSets = savedSets; // グローバル変数も更新
         chrome.storage.local.set({ currentActiveAnimationName: animationName, animationFrames: backgroundAnimationFrames, currentFrameIndex: 0 }, () => {
           if (isAnimating) {
             startBackgroundAnimation();
@@ -246,6 +248,7 @@ chrome.runtime.onMessage.addListener((message: any, sender: chrome.runtime.Messa
           stopBackgroundAnimation();
         }
         chrome.storage.local.set(updates, () => {
+          savedAnimationSets = existingSets; // グローバル変数も更新
           sendResponse({ success: true });
         });
       } else {
@@ -256,21 +259,36 @@ chrome.runtime.onMessage.addListener((message: any, sender: chrome.runtime.Messa
     return true;
   } else if (message.type === 'updateSavedAnimationInterval') {
     const { animationName, interval: newInterval } = message;
-    if (savedAnimationSets[animationName]) {
-      savedAnimationSets[animationName].interval = newInterval;
-      chrome.storage.local.set({ savedAnimationSets: savedAnimationSets }, () => {
-        sendResponse({ success: true });
-      });
-      if (currentActiveAnimationName === animationName) {
-        animationDisplayInterval = newInterval;
-        if (isAnimating) {
-          stopBackgroundAnimation();
-          startBackgroundAnimation();
+    chrome.storage.local.get(['savedAnimationSets'], (result: { savedAnimationSets?: { [key: string]: AnimationSet } }) => {
+      const currentSavedSets = result.savedAnimationSets || {};
+      if (currentSavedSets[animationName]) {
+        currentSavedSets[animationName].interval = newInterval;
+        chrome.storage.local.set({ savedAnimationSets: currentSavedSets }, () => {
+          savedAnimationSets = currentSavedSets; // グローバル変数も更新
+          sendResponse({ success: true });
+        });
+        if (currentActiveAnimationName === animationName) {
+          animationDisplayInterval = newInterval;
+          if (isAnimating) {
+            stopBackgroundAnimation();
+            startBackgroundAnimation();
+          }
         }
+      } else {
+        console.error(`アニメーション「${animationName}」が見つかりませんでした。`);
+        sendResponse({ success: false });
       }
-    } else {
-      console.error(`アニメーション「${animationName}」が見つかりませんでした。`);
-      sendResponse({ success: false });
+    });
+    return true;
+  } else if (message.type === 'updateAnimationInterval') { // 新しいハンドラ
+    const { interval: newInterval } = message;
+    animationDisplayInterval = newInterval;
+    chrome.storage.local.set({ animationInterval: newInterval }, () => {
+      sendResponse({ success: true });
+    });
+    if (isAnimating) {
+      stopBackgroundAnimation();
+      startBackgroundAnimation();
     }
     return true;
   }
