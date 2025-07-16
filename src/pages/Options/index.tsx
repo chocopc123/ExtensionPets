@@ -1,45 +1,54 @@
-function extractSequenceNumber(filename) {
+function extractSequenceNumber(filename: string): number {
   const match = filename.match(/_(\d+)\.(png|jpg|jpeg)$/i);
   return match ? parseInt(match[1], 10) : 0;
 }
 
-function estimateBase64SizeInBytes(base64Content) {
+function estimateBase64SizeInBytes(base64Content: string | null): number {
   if (!base64Content) return 0;
   const padding = (base64Content.match(/=/g) || []).length;
   return (base64Content.length * 0.75) - padding;
 }
 
-function startAnimation() {
+function startAnimation(): void {
   chrome.runtime.sendMessage({ type: 'startAnimationBackground' });
 }
 
-function stopAnimation() {
+function stopAnimation(): void {
   chrome.runtime.sendMessage({ type: 'stopAnimationBackground' });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  const imageUpload = document.getElementById('imageUpload');
-  const toggleAnimationBtn = document.getElementById('toggleAnimation');
-  const animationIcon = document.getElementById('animationIcon');
-  const animationContainer = document.getElementById('animation-container');
-  const animationSpeedSlider = document.getElementById('animationSpeed');
-  const currentSpeedSpan = document.getElementById('currentSpeed');
-  const savedAnimationsList = document.getElementById('saved-animations-list');
-  const animationNameModal = document.getElementById('animationNameModal');
-  const modalAnimationNameInput = document.getElementById('modalAnimationNameInput');
-  const cancelSaveAnimationBtn = document.getElementById('cancelSaveAnimationBtn');
-  const confirmSaveAnimationBtn = document.getElementById('confirmSaveAnimationBtn');
+  const imageUpload = document.getElementById('imageUpload') as HTMLInputElement;
+  const toggleAnimationBtn = document.getElementById('toggleAnimation') as HTMLButtonElement;
+  const animationIcon = document.getElementById('animationIcon') as HTMLSpanElement;
+  const animationContainer = document.getElementById('animation-container') as HTMLDivElement;
+  const animationSpeedSlider = document.getElementById('animationSpeed') as HTMLInputElement;
+  const currentSpeedSpan = document.getElementById('currentSpeed') as HTMLSpanElement;
+  const savedAnimationsList = document.getElementById('saved-animations-list') as HTMLDivElement;
+  const animationNameModal = document.getElementById('animationNameModal') as HTMLDivElement;
+  const modalAnimationNameInput = document.getElementById('modalAnimationNameInput') as HTMLInputElement;
+  const cancelSaveAnimationBtn = document.getElementById('cancelSaveAnimationBtn') as HTMLButtonElement;
+  const confirmSaveAnimationBtn = document.getElementById('confirmSaveAnimationBtn') as HTMLButtonElement;
 
   if (!imageUpload || !toggleAnimationBtn || !animationIcon || !animationContainer || !animationSpeedSlider || !currentSpeedSpan || !savedAnimationsList || !animationNameModal || !modalAnimationNameInput || !cancelSaveAnimationBtn || !confirmSaveAnimationBtn) {
     console.error("必要なDOM要素が見つかりませんでした。HTMLファイルを確認してください。");
     return;
   }
 
-  let isAnimating = false;
+let isAnimating: boolean = false;
+let currentActiveAnimationName: string | null = null;
 
-  function renderSavedAnimations() {
-    let totalAnimationBytes = 0;
-    chrome.storage.local.get(['savedAnimationSets', 'currentActiveAnimationName'], (result) => {
+interface AnimationSet {
+  frames: string[];
+  interval: number;
+}
+
+  function renderSavedAnimations(): void {
+    let totalAnimationBytes: number = 0;
+    chrome.storage.local.get(['savedAnimationSets', 'currentActiveAnimationName'], (result: {
+      savedAnimationSets?: { [key: string]: AnimationSet };
+      currentActiveAnimationName?: string;
+    }) => {
       const savedSets = result.savedAnimationSets || {};
       const currentActiveAnimationName = result.currentActiveAnimationName || null;
       savedAnimationsList.innerHTML = '';
@@ -67,9 +76,10 @@ document.addEventListener('DOMContentLoaded', () => {
         input.id = `anim-${name}`;
         input.checked = (name === currentActiveAnimationName);
 
-        input.addEventListener('change', (event) => {
-          if (event.target.checked) {
-            chrome.runtime.sendMessage({ type: 'loadAnimation', animationName: name }, (response) => {
+        input.addEventListener('change', (event: Event) => {
+          const target = event.target as HTMLInputElement;
+          if (target.checked) {
+            chrome.runtime.sendMessage({ type: 'loadAnimation', animationName: name }, (response: { success: boolean }) => {
               if (response && response.success) {
                 animationContainer.innerHTML = '';
                 savedSets[name].frames.forEach(frameSrc => {
@@ -78,13 +88,13 @@ document.addEventListener('DOMContentLoaded', () => {
                   img.className = 'w-[75px] h-[75px] object-cover mr-1.5';
                   animationContainer.appendChild(img);
                 });
-                chrome.runtime.sendMessage({ type: 'getAnimationStatus' }, (responseStatus) => {
+                chrome.runtime.sendMessage({ type: 'getAnimationStatus' }, (responseStatus: { isAnimating: boolean }) => {
                   if (responseStatus && typeof responseStatus.isAnimating !== 'undefined') {
                     isAnimating = responseStatus.isAnimating;
                     animationIcon.textContent = isAnimating ? '❚❚' : '▶';
                   }
                 });
-                animationSpeedSlider.value = savedSets[name].interval;
+                animationSpeedSlider.value = savedSets[name].interval.toString();
                 currentSpeedSpan.textContent = `${savedSets[name].interval}ms`;
               } else {
                 console.error(`アニメーション「${name}」のロードに失敗しました。`);
@@ -105,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
         animationNameSpan.textContent = name;
         animationNameSpan.className = 'mr-2.5 font-bold';
 
-        let animationSize = 0;
+        let animationSize: number = 0;
         if (savedSets[name].frames) {
           for (const frameSrc of savedSets[name].frames) {
             const parts = frameSrc.split(',');
@@ -124,26 +134,27 @@ document.addEventListener('DOMContentLoaded', () => {
         const speedControlDiv = document.createElement('div');
         speedControlDiv.className = 'flex items-center w-1/2 flex-none gap-x-2.5 mr-5'
         
-        const animationSpeedSlider = document.createElement('input');
-        animationSpeedSlider.type = 'range';
-        animationSpeedSlider.id = `speed-${name}`;
-        animationSpeedSlider.min = '20';
-        animationSpeedSlider.max = '300';
-        animationSpeedSlider.step = '10';
-        animationSpeedSlider.value = savedSets[name].interval;
-        animationSpeedSlider.className = 'h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-lg w-full';
-        speedControlDiv.appendChild(animationSpeedSlider);
+        const animationSpeedSliderPerItem = document.createElement('input');
+        animationSpeedSliderPerItem.type = 'range';
+        animationSpeedSliderPerItem.id = `speed-${name}`;
+        animationSpeedSliderPerItem.min = '20';
+        animationSpeedSliderPerItem.max = '300';
+        animationSpeedSliderPerItem.step = '10';
+        animationSpeedSliderPerItem.value = savedSets[name].interval.toString();
+        animationSpeedSliderPerItem.className = 'h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-lg w-full';
+        speedControlDiv.appendChild(animationSpeedSliderPerItem);
 
-        const currentSpeedSpan = document.createElement('span');
-        currentSpeedSpan.id = `currentSpeed-${name}`;
-        currentSpeedSpan.className = 'text-gray-700 font-medium';
-        currentSpeedSpan.textContent = `${savedSets[name].interval}ms`;
-        speedControlDiv.appendChild(currentSpeedSpan);
+        const currentSpeedSpanPerItem = document.createElement('span');
+        currentSpeedSpanPerItem.id = `currentSpeed-${name}`;
+        currentSpeedSpanPerItem.className = 'text-gray-700 font-medium';
+        currentSpeedSpanPerItem.textContent = `${savedSets[name].interval}ms`;
+        speedControlDiv.appendChild(currentSpeedSpanPerItem);
 
-        animationSpeedSlider.addEventListener('input', (event) => {
-          const newSpeed = event.target.value;
-          currentSpeedSpan.textContent = `${newSpeed}ms`;
-          chrome.runtime.sendMessage({ type: 'updateSavedAnimationInterval', animationName: name, interval: parseInt(newSpeed, 10) }, (response) => {
+        animationSpeedSliderPerItem.addEventListener('input', (event: Event) => {
+          const target = event.target as HTMLInputElement;
+          const newSpeed = target.value;
+          currentSpeedSpanPerItem.textContent = `${newSpeed}ms`;
+          chrome.runtime.sendMessage({ type: 'updateSavedAnimationInterval', animationName: name, interval: parseInt(newSpeed, 10) }, (response: { success: boolean }) => {
             if (response && response.success) {
             } else {
               console.error(`アニメーション「${name}」の速度更新に失敗しました。`);
@@ -159,8 +170,9 @@ document.addEventListener('DOMContentLoaded', () => {
         deleteBtn.textContent = '削除';
         deleteBtn.className = 'px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2';
         deleteBtn.addEventListener('click', () => {
-          if (confirm(`アニメーション「${name}」を本当に削除しますか？`)) {
-            chrome.runtime.sendMessage({ type: 'deleteAnimation', animationName: name }, (response) => {
+          // eslint-disable-next-line no-restricted-globals
+          if (confirm(`アニメーション「${name}を本当に削除しますか？`)) {
+            chrome.runtime.sendMessage({ type: 'deleteAnimation', animationName: name }, (response: { success: boolean }) => {
               if (response && response.success) {
                 renderSavedAnimations();
               } else {
@@ -187,14 +199,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  chrome.runtime.sendMessage({ type: 'getAnimationStatus' }, (response) => {
+  chrome.runtime.sendMessage({ type: 'getAnimationStatus' }, (response: { isAnimating: boolean }) => {
     if (response && typeof response.isAnimating !== 'undefined') {
       isAnimating = response.isAnimating;
       animationIcon.textContent = isAnimating ? '❚❚' : '▶';
     }
   });
 
-  chrome.storage.local.get(['animationFrames', 'currentFrameIndex'], (result) => {
+  chrome.storage.local.get(['animationFrames', 'currentFrameIndex'], (result: { animationFrames?: string[]; currentFrameIndex?: number }) => {
     if (result.animationFrames && result.animationFrames.length > 0) {
       const animationFramesFromStorage = result.animationFrames;
       animationContainer.innerHTML = '';
@@ -210,14 +222,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  chrome.storage.local.get(['animationInterval'], (result) => {
+  chrome.storage.local.get(['animationInterval', 'currentActiveAnimationName'], (result: { animationInterval?: number, currentActiveAnimationName?: string }) => {
     const savedInterval = result.animationInterval !== undefined ? result.animationInterval : 100;
-    animationSpeedSlider.value = savedInterval;
+    animationSpeedSlider.value = savedInterval.toString();
     currentSpeedSpan.textContent = `${savedInterval}ms`;
+    currentActiveAnimationName = result.currentActiveAnimationName || null;
   });
 
-  imageUpload.addEventListener('change', (event) => {
-    function extractBaseName(filename) {
+  imageUpload.addEventListener('change', (event: Event) => {
+    function extractBaseName(filename: string): string {
       const parts = filename.split('.');
       if (parts.length > 1) {
         const nameWithoutExt = parts.slice(0, -1).join('.');
@@ -227,7 +240,8 @@ document.addEventListener('DOMContentLoaded', () => {
       return filename;
     }
 
-    const files = Array.from(event.target.files);
+    const target = event.target as HTMLInputElement;
+    const files = Array.from(target.files || []);
     files.sort((a, b) => {
       const numA = extractSequenceNumber(a.name);
       const numB = extractSequenceNumber(b.name);
@@ -235,19 +249,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const fileReadPromises = files.map(file => {
-      return new Promise((resolve) => {
+      return new Promise<string | ArrayBuffer | null>((resolve) => {
         const reader = new FileReader();
         reader.onload = (e) => {
-          resolve(e.target.result);
+          resolve(e.target?.result || null);
         };
         reader.readAsDataURL(file);
       });
     });
 
     Promise.all(fileReadPromises).then(newAnimationFrames => {
-      chrome.runtime.sendMessage({ type: 'updateFramesPreview', animationFrames: newAnimationFrames }, () => {
+      const filteredFrames = newAnimationFrames.filter((frame): frame is string => typeof frame === 'string');
+      chrome.runtime.sendMessage({ type: 'updateFramesPreview', animationFrames: filteredFrames }, () => {
         animationContainer.innerHTML = '';
-        newAnimationFrames.forEach(frameSrc => {
+        filteredFrames.forEach(frameSrc => {
           const img = document.createElement('img');
           img.src = frameSrc;
           img.style.width = '75px';
@@ -257,7 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
           animationContainer.appendChild(img);
         });
         const currentInterval = 100;
-        animationSpeedSlider.value = currentInterval;
+        animationSpeedSlider.value = currentInterval.toString();
         currentSpeedSpan.textContent = `${currentInterval}ms`;
         chrome.storage.local.set({ animationInterval: currentInterval });
 
@@ -271,32 +286,37 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         modalAnimationNameInput.focus();
       });
-      event.target.value = '';
+      target.value = '';
     });
   });
 
   confirmSaveAnimationBtn.addEventListener('click', () => {
     const animationName = modalAnimationNameInput.value.trim();
     if (animationName) {
-      chrome.storage.local.get(['currentPreviewFrames', 'animationInterval', 'savedAnimationSets'], (result) => {
+      chrome.storage.local.get(['currentPreviewFrames', 'animationInterval', 'savedAnimationSets'], (result: {
+        currentPreviewFrames?: string[];
+        animationInterval?: number;
+        savedAnimationSets?: { [key: string]: AnimationSet };
+      }) => {
         const framesToSave = result.currentPreviewFrames || [];
         const intervalToSave = result.animationInterval !== undefined ? result.animationInterval : 100;
         const existingSets = result.savedAnimationSets || {};
 
         if (framesToSave.length > 0) {
           if (existingSets[animationName]) {
+            // eslint-disable-next-line no-restricted-globals
             if (!confirm(`アニメーション「${animationName}」は既に存在します。上書きしますか？`)) {
               return;
             }
           }
 
-          chrome.runtime.sendMessage({ type: 'saveAnimation', animationName: animationName, animationFrames: framesToSave, animationInterval: intervalToSave }, (response) => {
+          chrome.runtime.sendMessage({ type: 'saveAnimation', animationName: animationName, animationFrames: framesToSave, animationInterval: intervalToSave }, (response: { success: boolean }) => {
             if (response && response.success) {
               modalAnimationNameInput.value = '';
               animationNameModal.classList.add('hidden');
               renderSavedAnimations();
 
-              chrome.runtime.sendMessage({ type: 'loadAnimation', animationName: animationName }, (loadResponse) => {
+              chrome.runtime.sendMessage({ type: 'loadAnimation', animationName: animationName }, (loadResponse: { success: boolean }) => {
                 if (loadResponse && loadResponse.success) {
                   chrome.storage.local.set({ currentActiveAnimationName: animationName }, () => {
                     renderSavedAnimations();
@@ -324,7 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
     modalAnimationNameInput.value = '';
   });
 
-  animationNameModal.addEventListener('click', (event) => {
+  animationNameModal.addEventListener('click', (event: MouseEvent) => {
     if (event.target === animationNameModal) {
       animationNameModal.classList.add('hidden');
       modalAnimationNameInput.value = '';
@@ -345,13 +365,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  animationSpeedSlider.addEventListener('input', (event) => {
-    const newSpeed = event.target.value;
+  animationSpeedSlider.addEventListener('input', (event: Event) => {
+    const target = event.target as HTMLInputElement;
+    const newSpeed = target.value;
     currentSpeedSpan.textContent = `${newSpeed}ms`;
-    chrome.runtime.sendMessage({ type: 'updateAnimationInterval', interval: parseInt(newSpeed, 10) }, () => {
-    });
-    chrome.storage.local.set({ animationInterval: parseInt(newSpeed, 10) }, () => {
-    });
+    if (currentActiveAnimationName) {
+      chrome.runtime.sendMessage({ type: 'updateSavedAnimationInterval', animationName: currentActiveAnimationName, interval: parseInt(newSpeed, 10) }, (response: { success: boolean }) => {
+        if (!response || !response.success) {
+          console.error(`アニメーション「${currentActiveAnimationName}」の速度更新に失敗しました。`);
+        }
+      });
+    } else {
+      // アクティブなアニメーションがない場合、animationIntervalを直接更新
+      chrome.storage.local.set({ animationInterval: parseInt(newSpeed, 10) }, () => {
+      });
+    }
   });
 
   renderSavedAnimations();

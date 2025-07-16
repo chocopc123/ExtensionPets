@@ -17,5 +17,8 @@
       "resources": ["extensionPetsIcon.png"],
       "matches": []
     }
-  ]
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval' http://localhost:* http://127.0.0.1:*; object-src 'self'"
+  }
 }

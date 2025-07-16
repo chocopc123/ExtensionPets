@@ -1,23 +1,21 @@
-var webpack = require('webpack'),
-  path = require('path'),
-  fileSystem = require('fs-extra'),
-  env = require('./utils/env'),
-  CopyWebpackPlugin = require('copy-webpack-plugin'),
-  HtmlWebpackPlugin = require('html-webpack-plugin'),
-  TerserPlugin = require('terser-webpack-plugin');
-var MiniCssExtractPlugin = require('mini-css-extract-plugin');
-var { CleanWebpackPlugin } = require('clean-webpack-plugin');
-var ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
-var ReactRefreshTypeScript = require('react-refresh-typescript');
+const webpack = require('webpack');
+const path = require('path');
+const fileSystem = require('fs-extra');
+const env = require('./utils/env.ts');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+const TerserPlugin = require('terser-webpack-plugin');
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const { CleanWebpackPlugin } = require('clean-webpack-plugin');
+const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
 
-const ASSET_PATH = process.env.ASSET_PATH || '/'; // Change from './' to '/'
+const ASSET_PATH = process.env.ASSET_PATH || '/';
 
-var alias = {};
+const alias = {};
 
-// load the secrets
-var secretsPath = path.join(__dirname, 'secrets.' + env.NODE_ENV + '.js');
+const secretsPath = path.join(__dirname, 'secrets.' + env.NODE_ENV + '.js');
 
-var fileExtensions = [
+const fileExtensions = [
   'jpg',
   'jpeg',
   'png',
@@ -36,15 +34,13 @@ if (fileSystem.existsSync(secretsPath)) {
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
-var options = {
-  mode: process.env.NODE_ENV || 'development',
+const options = {
+  mode: (process.env.NODE_ENV === 'production' ? 'production' : 'development'),
+  devtool: (process.env.NODE_ENV === 'production' ? undefined : 'cheap-module-source-map'),
   entry: {
-    background: path.join(__dirname, 'src', 'pages', 'Background', 'index.js'),
-    options: [path.join(__dirname, 'src', 'pages', 'Options', 'index.js'), path.join(__dirname, 'src', 'assets', 'css', 'options.css')],
-    popup: path.join(__dirname, 'src', 'pages', 'Popup', 'index.js'),
-  },
-  chromeExtensionBoilerplate: {
-    notHotReload: ['background', 'contentScript', 'devtools'],
+    background: path.join(__dirname, 'src', 'pages', 'Background', 'index.ts'),
+    options: [path.join(__dirname, 'src', 'pages', 'Options', 'index.tsx'), path.join(__dirname, 'src', 'assets', 'css', 'options.css')],
+    popup: path.join(__dirname, 'src', 'pages', 'Popup', 'index.tsx'),
   },
   output: {
     filename: '[name].bundle.js',
@@ -55,9 +51,7 @@ var options = {
   module: {
     rules: [
       {
-        // look for .css or .scss files
         test: /\.(css|scss)$/,
-        // in the `src` directory
         use: [
           {
             loader: MiniCssExtractPlugin.loader,
@@ -74,10 +68,6 @@ var options = {
         test: new RegExp('.(' + fileExtensions.join('|') + ')$'),
         type: 'asset/resource',
         exclude: /node_modules/,
-        // loader: 'file-loader',
-        // options: {
-        //   name: '[name].[ext]',
-        // },
       },
       {
         test: /\.html$/,
@@ -92,7 +82,7 @@ var options = {
             loader: require.resolve('ts-loader'),
             options: {
               getCustomTransformers: () => ({
-                before: [isDevelopment && ReactRefreshTypeScript()].filter(
+                before: [isDevelopment && require('react-refresh-typescript').default()].filter(
                   Boolean
                 ),
               }),
@@ -130,16 +120,14 @@ var options = {
     isDevelopment && new ReactRefreshWebpackPlugin(),
     new CleanWebpackPlugin({ verbose: false }),
     new webpack.ProgressPlugin(),
-    // expose and write the allowed env vars on the compiled bundle
-    new webpack.EnvironmentPlugin(['NODE_ENV']),
+    new webpack.EnvironmentPlugin({ NODE_ENV: 'development' }),
     new CopyWebpackPlugin({
       patterns: [
         {
           from: 'src/manifest.json',
-          to: path.join(__dirname, 'build'),
+          to: path.join(__dirname, 'build', 'manifest.json'),
           force: true,
-          transform: function (content, path) {
-            // generates the manifest file using the package.json informations
+          transform: function (content) {
             return Buffer.from(
               JSON.stringify({
                 description: process.env.npm_package_description,
@@ -172,24 +160,11 @@ var options = {
       chunks: ['popup'],
       cache: false,
     }),
-    new MiniCssExtractPlugin({ filename: '[name].[contenthash].css' }), // Add this line
+    new MiniCssExtractPlugin({ filename: '[name].[contenthash].css' }),
   ].filter(Boolean),
   infrastructureLogging: {
     level: 'info',
   },
 };
-
-if (env.NODE_ENV === 'development') {
-  options.devtool = 'cheap-module-source-map';
-} else {
-  options.optimization = {
-    minimize: true,
-    minimizer: [
-      new TerserPlugin({
-        extractComments: false,
-      }),
-    ],
-  };
-}
 
 module.exports = options;
