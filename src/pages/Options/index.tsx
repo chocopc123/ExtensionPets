@@ -15,7 +15,8 @@ interface AnimationSet {
 }
 
 interface DOMCache {
-  imageUpload: HTMLInputElement;
+  imageUpload: HTMLDivElement; // HTMLInputElement から HTMLDivElement に変更
+  actualImageUpload: HTMLInputElement; // 新しく追加
   animationContainer: HTMLDivElement;
   savedAnimationsList: HTMLDivElement;
   animationNameModal: HTMLDivElement;
@@ -28,7 +29,8 @@ interface DOMCache {
 let dom: DOMCache;
 
 function getDOMReferences(): DOMCache | null {
-  const imageUpload = document.getElementById('imageUpload') as HTMLInputElement;
+  const imageUpload = document.getElementById('imageUpload') as HTMLDivElement; // HTMLInputElement から HTMLDivElement に変更
+  const actualImageUpload = document.getElementById('actualImageUpload') as HTMLInputElement; // 新しく追加
   const animationContainer = document.getElementById('animation-container') as HTMLDivElement;
   const savedAnimationsList = document.getElementById('saved-animations-list') as HTMLDivElement;
   const animationNameModal = document.getElementById('animationNameModal') as HTMLDivElement;
@@ -37,12 +39,13 @@ function getDOMReferences(): DOMCache | null {
   const confirmSaveAnimationBtn = document.getElementById('confirmSaveAnimationBtn') as HTMLButtonElement;
   const totalUsageElement = document.getElementById('storage-usage') as HTMLSpanElement;
 
-  if (!imageUpload || !animationContainer || !savedAnimationsList || !animationNameModal || !modalAnimationNameInput || !cancelSaveAnimationBtn || !confirmSaveAnimationBtn || !totalUsageElement) {
+  if (!imageUpload || !actualImageUpload || !animationContainer || !savedAnimationsList || !animationNameModal || !modalAnimationNameInput || !cancelSaveAnimationBtn || !confirmSaveAnimationBtn || !totalUsageElement) {
     console.error("必要なDOM要素が見つかりませんでした。HTMLファイルを確認してください。");
     return null;
   }
   return {
     imageUpload,
+    actualImageUpload, // 追加
     animationContainer,
     savedAnimationsList,
     animationNameModal,
@@ -348,8 +351,39 @@ document.addEventListener('DOMContentLoaded', () => {
   loadCurrentAnimationState(dom.animationContainer);
   renderSavedAnimations();
 
-  dom.imageUpload.addEventListener('change', (event) => handleImageUpload(event, dom.animationContainer, dom.animationNameModal, dom.modalAnimationNameInput, renderAnimationFrames, extractSequenceNumber, extractBaseName));
+  // ドラッグ＆ドロップエリアのクリックでファイル選択ダイアログを開く
+  dom.imageUpload.addEventListener('click', () => {
+    dom.actualImageUpload.click();
+  });
+
+  // 実際のファイル入力の変更イベントを処理
+  dom.actualImageUpload.addEventListener('change', (event) => {
+    handleImageUpload(event, dom.animationContainer, dom.animationNameModal, dom.modalAnimationNameInput, renderAnimationFrames, extractSequenceNumber, extractBaseName);
+    dom.actualImageUpload.value = ''; // ファイル選択後にinputをクリア
+  });
+
+  // ドラッグ＆ドロップイベントリスナーを追加
+  dom.imageUpload.addEventListener('dragover', (event) => {
+    event.preventDefault(); // デフォルトの動作をキャンセルしてドロップを許可
+    dom.imageUpload.classList.add('border-blue-500', 'border-2'); // ドラッグオーバー時のスタイル
+  });
+
+  dom.imageUpload.addEventListener('dragleave', () => {
+    dom.imageUpload.classList.remove('border-blue-500', 'border-2'); // ドラッグリーブ時のスタイルを元に戻す
+  });
+
+  dom.imageUpload.addEventListener('drop', (event) => {
+    event.preventDefault(); // デフォルトの動作をキャンセル
+    dom.imageUpload.classList.remove('border-blue-500', 'border-2'); // スタイルを元に戻す
+
+    const files = event.dataTransfer?.files;
+    if (files && files.length > 0) {
+      // DataTransferItemListをFileListに変換してhandleImageUploadに渡す
+      handleImageUpload({ target: { files: files } } as unknown as Event, dom.animationContainer, dom.animationNameModal, dom.modalAnimationNameInput, renderAnimationFrames, extractSequenceNumber, extractBaseName);
+    }
+  });
+
   dom.confirmSaveAnimationBtn.addEventListener('click', () => handleConfirmSaveAnimation(dom.modalAnimationNameInput, dom.animationNameModal, renderSavedAnimations));
-  dom.cancelSaveAnimationBtn.addEventListener('click', () => handleCancelSaveAnimation(dom.modalAnimationNameInput, dom.animationNameModal));
+  dom.cancelSaveAnimationBtn.addEventListener('click', () => handleCancelSaveAnimation(dom.modalAnimationNameInput, dom.modalAnimationNameInput));
   dom.animationNameModal.addEventListener('click', (event) => handleAnimationModalClick(event, dom.animationNameModal, dom.modalAnimationNameInput));
 });
