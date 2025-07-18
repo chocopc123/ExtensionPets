@@ -1,3 +1,5 @@
+import React from 'react'; // React.RefObjectを使用するためにReactをインポート
+
 export function extractSequenceNumber(filename: string): number {
   const match = filename.match(/_(\d+)\.(png|jpg|jpeg)$/i);
   return match ? parseInt(match[1], 10) : 0;
@@ -67,22 +69,25 @@ export async function handleImageUpload(event: Event, animationNameModal: HTMLDi
 
   chrome.runtime.sendMessage({ type: 'updateFramesPreview', animationFrames: filteredFrames }, () => {
     // renderFrames(filteredFrames, animationContainer); // アップロードタブではプレビュー不要のため削除
-    chrome.storage.local.set({ currentActiveAnimationName: null }, () => {
-      animationNameModal.classList.remove('hidden');
-      if (files.length > 0) {
-        const firstFileName = files[0].name;
-        const baseName = extractBase(firstFileName);
-        modalAnimationNameInput.value = baseName;
-      } else {
-        modalAnimationNameInput.value = '';
-      }
-      modalAnimationNameInput.focus();
-    });
+    animationNameModal.classList.remove('hidden');
+    if (files.length > 0) {
+      const firstFileName = files[0].name;
+      const baseName = extractBase(firstFileName);
+      modalAnimationNameInput.value = baseName;
+    } else {
+      modalAnimationNameInput.value = '';
+    }
+    modalAnimationNameInput.focus();
   });
   target.value = '';
 }
 
-export function handleConfirmSaveAnimation(modalAnimationNameInput: HTMLInputElement, animationNameModal: HTMLDivElement): void {
+export function handleConfirmSaveAnimation(
+  modalAnimationNameInput: HTMLInputElement,
+  animationNameModal: HTMLDivElement,
+  animationContainerRef: React.RefObject<HTMLDivElement>,
+  onAnimationSaved: () => void
+): void {
   const animationName = modalAnimationNameInput.value.trim();
   if (!animationName) {
     alert('アニメーション名を入力してください。');
@@ -115,9 +120,22 @@ export function handleConfirmSaveAnimation(modalAnimationNameInput: HTMLInputEle
         modalAnimationNameInput.value = '';
         animationNameModal.classList.add('hidden');
 
-        // 保存成功後、currentActiveAnimationNameを設定することで、AnimationListPageが自動的に更新される
-        chrome.storage.local.set({ currentActiveAnimationName: animationName });
-
+        // 保存成功後、currentActiveAnimationNameを設定し、アニメーションをロードしてレンダリング
+        chrome.storage.local.set({ currentActiveAnimationName: animationName }, () => {
+          chrome.runtime.sendMessage({ type: 'loadAnimation', animationName: animationName }, (loadResponse: { success: boolean }) => {
+            if (loadResponse && loadResponse.success) {
+              chrome.storage.local.get('savedAnimationSets', (result: { savedAnimationSets?: { [key: string]: AnimationSet } }) => {
+                const sets = result.savedAnimationSets || {};
+                if (animationContainerRef.current && sets[animationName]) {
+                  renderAnimationFrames(sets[animationName].frames, animationContainerRef.current);
+                }
+                onAnimationSaved(); // アニメーション保存後にリストを更新するためのコールバックを呼び出す
+              });
+            } else {
+              console.error(`アニメーション「${animationName}」のロードに失敗しました。`);
+            }
+          });
+        });
       } else {
         console.error(`アニメーション「${animationName}」の保存に失敗しました。`);
       }

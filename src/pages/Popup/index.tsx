@@ -133,7 +133,12 @@ const AnimationListItem: React.FC<AnimationListItemProps> = ({
 };
 
 
-const UploadPage: React.FC = () => {
+interface UploadPageProps {
+  animationContainerRef: React.RefObject<HTMLDivElement>;
+  onAnimationSaved: () => void; // アニメーション保存後にリストを更新するためのコールバック
+}
+
+const UploadPage: React.FC<UploadPageProps> = ({ animationContainerRef, onAnimationSaved }) => {
   const imageUploadRef = useRef<HTMLLabelElement>(null); // label要素なのでHTMLLabelElement
   const actualImageUploadRef = useRef<HTMLInputElement>(null);
   const animationNameModalRef = useRef<HTMLDivElement>(null);
@@ -182,7 +187,7 @@ const UploadPage: React.FC = () => {
     };
     imageUpload.addEventListener('drop', handleDrop);
 
-    const handleConfirm = () => handleConfirmSaveAnimation(modalAnimationNameInput, animationNameModal);
+    const handleConfirm = () => handleConfirmSaveAnimation(modalAnimationNameInput, animationNameModal, animationContainerRef, onAnimationSaved);
     confirmSaveAnimationBtn.addEventListener('click', handleConfirm);
 
     const handleCancel = () => handleCancelSaveAnimation(modalAnimationNameInput, animationNameModal);
@@ -232,9 +237,12 @@ const UploadPage: React.FC = () => {
   );
 };
 
-const AnimationListPage: React.FC = () => {
+interface AnimationListPageProps {
+  animationContainerRef: React.RefObject<HTMLDivElement>;
+}
+
+const AnimationListPage: React.FC<AnimationListPageProps> = ({ animationContainerRef }) => {
   const savedAnimationsListRef = useRef<HTMLDivElement>(null);
-  const animationContainerRef = useRef<HTMLDivElement>(null); // AnimationListItemに渡すため
   const totalUsageElementRef = useRef<HTMLParagraphElement>(null); // pタグのRefに変更
 
   const [savedAnimationSets, setSavedAnimationSets] = useState<{ [key: string]: AnimationSet }>({});
@@ -341,16 +349,21 @@ const AnimationListPage: React.FC = () => {
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<'upload' | 'list'>('list'); // 初期選択を'list'に変更
+  const animationContainerRef = useRef<HTMLDivElement>(null); // AppコンポーネントでRefを管理
 
-  useEffect(() => {
-    // 初期ロード時に現在のDOMの状態をロード
-    // loadCurrentAnimationState(references.animationContainer); // Refに移行したため不要
-  }, []);
+  const handleAnimationSaved = () => {
+    // アニメーションが保存されたら、リストページに切り替えて更新をトリガー
+    setCurrentPage('list');
+  };
 
   return (
     <div className="w-full max-w-[600px] mx-auto p-4 pb-8"> {/* ナビゲーションの高さ分だけ下部にパディングを追加 */}
       <div className="bg-white p-6 rounded-xl shadow-lg transform transition-all duration-300 hover:scale-[1.01]">
-        {currentPage === 'upload' ? <UploadPage /> : <AnimationListPage />}
+        {currentPage === 'upload' ? (
+          <UploadPage animationContainerRef={animationContainerRef} onAnimationSaved={handleAnimationSaved} />
+        ) : (
+          <AnimationListPage animationContainerRef={animationContainerRef} />
+        )}
       </div>
       <Navigation currentPage={currentPage} setCurrentPage={setCurrentPage} />
     </div>
