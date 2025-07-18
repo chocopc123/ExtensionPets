@@ -312,14 +312,44 @@ function renderSavedAnimations(): void {
     const currentActiveAnimationName = result.currentActiveAnimationName || null;
     dom.savedAnimationsList.innerHTML = '';
 
-    if (Object.keys(savedSets).length === 0) {
+    const animationNames = Object.keys(savedSets).sort(); // アニメーション名をソートして、最も古いものを特定
+
+    if (animationNames.length === 0) {
       dom.savedAnimationsList.innerHTML = '<p>保存されたアニメーションはありません。</p>';
+      chrome.storage.local.set({ currentActiveAnimationName: null, animationFrames: [], currentFrameIndex: 0 });
+      renderAnimationFrames([], dom.animationContainer);
+      if (dom.totalUsageElement) {
+        dom.totalUsageElement.textContent = `Approx. 0.00KB`;
+      }
       return;
     }
 
-    for (const name in savedSets) {
+    let newActiveAnimationName = currentActiveAnimationName;
+
+    // 現在アクティブなアニメーションが削除された、または存在しない場合、最も古いアニメーションを選択
+    if (!currentActiveAnimationName || !savedSets[currentActiveAnimationName]) {
+      newActiveAnimationName = animationNames[0]; // ソートされたリストの最初の要素が最も古い
+      if (newActiveAnimationName) { // newActiveAnimationName が null でないことを確認
+        chrome.runtime.sendMessage({ type: 'loadAnimation', animationName: newActiveAnimationName }, (loadResponse: { success: boolean }) => {
+          if (loadResponse && loadResponse.success) {
+            chrome.storage.local.set({ currentActiveAnimationName: newActiveAnimationName }, () => {
+              if (newActiveAnimationName && savedSets[newActiveAnimationName]) { // ここで再度チェック
+                renderAnimationFrames(savedSets[newActiveAnimationName].frames, dom.animationContainer);
+              }
+              // 再度renderSavedAnimationsを呼び出してラジオボタンの状態を更新
+              renderSavedAnimations();
+            });
+          } else {
+            console.error(`アニメーション「${newActiveAnimationName}」のロードに失敗しました。`);
+          }
+        });
+        return; // ロード処理が非同期なので、ここで一度抜ける
+      }
+    }
+
+    for (const name of animationNames) {
       const animationSet = savedSets[name];
-      const listItem = createAnimationListItem(name, animationSet, currentActiveAnimationName, dom.animationContainer, renderAnimationFrames, estimateBase64SizeInBytes, renderSavedAnimations);
+      const listItem = createAnimationListItem(name, animationSet, newActiveAnimationName, dom.animationContainer, renderAnimationFrames, estimateBase64SizeInBytes, renderSavedAnimations);
       dom.savedAnimationsList.appendChild(listItem);
 
       let animationSize: number = 0;

@@ -165,7 +165,7 @@ function handleDeleteAnimation(message: any, sendResponse: (response?: any) => v
       const updates: { savedAnimationSets: { [key: string]: AnimationSet }; currentActiveAnimationName?: string | null } = { savedAnimationSets: existingSets };
       if (activeName === animationName) {
         updates.currentActiveAnimationName = null;
-        clearInterval(state.animationInterval);
+        clearInterval(state.animationInterval as number); // 型アサーションを追加
         state.animationInterval = null;
         chrome.alarms.clear(KEEP_ALIVE_ALARM_NAME);
       }
