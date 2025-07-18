@@ -40,7 +40,7 @@ const options = {
   entry: {
     background: path.join(__dirname, 'src', 'pages', 'Background', 'index.ts'),
     options: [path.join(__dirname, 'src', 'pages', 'Options', 'index.tsx'), path.join(__dirname, 'src', 'assets', 'css', 'options.css')],
-    popup: path.join(__dirname, 'src', 'pages', 'Popup', 'index.tsx'),
+    popup: [path.join(__dirname, 'src', 'pages', 'Popup', 'index.tsx'), path.join(__dirname, 'src', 'assets', 'css', 'options.css')],
   },
   output: {
     filename: '[name].bundle.js',
@@ -157,7 +157,7 @@ const options = {
     new HtmlWebpackPlugin({
       template: path.join(__dirname, 'src', 'pages', 'Popup', 'index.html'),
       filename: 'popup.html',
-      chunks: ['popup'],
+      chunks: ['popup', 'options'],
       cache: false,
     }),
     new MiniCssExtractPlugin({ filename: '[name].[contenthash].css' }),
