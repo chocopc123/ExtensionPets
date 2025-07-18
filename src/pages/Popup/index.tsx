@@ -205,11 +205,11 @@ const UploadPage: React.FC = () => {
 
   return (
     <div className="upload-page">
-      <h1 className="text-2xl font-extrabold mb-5 text-center text-indigo-700">アニメーション設定</h1>
+      <h1 className="text-2xl font-extrabold mb-5 text-center text-indigo-700">アップロード</h1>
       <p className="mb-5 text-center text-gray-600 text-sm">アニメーションに使用するPNGまたはJPG画像をアップロードしてください。<br />ファイル名は連番（例: image_0001.png, image_0002.png）である必要があります。</p>
 
       <div className="mb-6">
-        <label htmlFor="actualImageUpload" ref={imageUploadRef} className="flex flex-col items-center justify-center w-full h-60 border-2 border-dashed border-indigo-300 rounded-lg cursor-pointer bg-indigo-50 hover:bg-indigo-100 transition-colors duration-300 ease-in-out">
+        <label htmlFor="actualImageUpload" ref={imageUploadRef} className="flex flex-col items-center justify-center w-full h-65 border-2 border-dashed border-indigo-300 rounded-lg cursor-pointer bg-indigo-50 hover:bg-indigo-100 transition-colors duration-300 ease-in-out">
           <svg className="w-10 h-10 text-indigo-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 0115.9 6L16 6a3 3 0 013 3v10a2 2 0 01-2 2H7a2 2 0 01-2-2V7a2 2 0 012-2z"></path></svg>
           <p className="mb-1 text-sm text-indigo-600"><span className="font-bold">クリック</span> または <span className="font-bold">ドラッグアンドドロップ</span> してアップロード</p>
           <p className="text-xs text-indigo-500">PNG, JPG, JPEG</p>
@@ -340,7 +340,7 @@ const AnimationListPage: React.FC = () => {
 };
 
 const App: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState<'upload' | 'list'>('upload');
+  const [currentPage, setCurrentPage] = useState<'upload' | 'list'>('list'); // 初期選択を'list'に変更
 
   useEffect(() => {
     // 初期ロード時に現在のDOMの状態をロード
@@ -361,20 +361,20 @@ const Navigation: React.FC<{ currentPage: 'upload' | 'list'; setCurrentPage: (pa
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-10 bg-indigo-50 border-t border-indigo-200 flex justify-around shadow-xl">
       <button
-        className={`flex flex-col items-center justify-center flex-grow py-2 text-indigo-800 relative transition-colors duration-200 ${currentPage === 'upload' ? 'text-indigo-600' : 'hover:text-indigo-500'}`}
-        onClick={() => setCurrentPage('upload')}
-      >
-        <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-        <span className="text-xs font-medium">アップロード</span>
-        {currentPage === 'upload' && <span className="absolute bottom-0 left-0 right-0 h-1 bg-indigo-600"></span>}
-      </button>
-      <button
         className={`flex flex-col items-center justify-center flex-grow py-2 text-indigo-800 relative transition-colors duration-200 ${currentPage === 'list' ? 'text-indigo-600' : 'hover:text-indigo-500'}`}
         onClick={() => setCurrentPage('list')}
       >
         <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
         <span className="text-xs font-medium">アニメーション一覧</span>
         {currentPage === 'list' && <span className="absolute bottom-0 left-0 right-0 h-1 bg-indigo-600"></span>}
+      </button>
+      <button
+        className={`flex flex-col items-center justify-center flex-grow py-2 text-indigo-800 relative transition-colors duration-200 ${currentPage === 'upload' ? 'text-indigo-600' : 'hover:text-indigo-500'}`}
+        onClick={() => setCurrentPage('upload')}
+      >
+        <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+        <span className="text-xs font-medium">アップロード</span>
+        {currentPage === 'upload' && <span className="absolute bottom-0 left-0 right-0 h-1 bg-indigo-600"></span>}
       </button>
     </nav>
   );
