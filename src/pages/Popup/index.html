@@ -5,48 +5,48 @@
     <title>Extension Pets Popup</title>
     <style>
       body {
-        width: 600px; /* ポップアップの幅を倍に */
+        width: 600px; /* ポップアップの幅を調整 */
         height: 700px; /* ポップアップの高さも調整 */
+        overflow-y: auto; /* 必要に応じてスクロールバーを表示 */
       }
     </style>
   </head>
-  <body class="font-sans p-5 bg-gray-100 min-h-screen">
-    <div class="max-w-8xl mx-auto bg-white p-8 rounded-lg shadow-md">
-      <h1 class="text-3xl font-bold mb-6 text-gray-800">アニメーション設定</h1>
-      <p class="mb-4 text-gray-700">アニメーションに使用するPNGまたはJPG画像をアップロードしてください。<br>ファイル名は連番（例: image_0001.png, image_0002.png）である必要があります。</p>
+  <body class="font-sans p-4 bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen text-gray-800">
+    <div class="max-w-lg mx-auto bg-white p-6 rounded-xl shadow-lg transform transition-all duration-300 hover:scale-[1.01]">
+      <h1 class="text-2xl font-extrabold mb-5 text-center text-indigo-700">アニメーション設定</h1>
+      <p class="mb-5 text-center text-gray-600 text-sm">アニメーションに使用するPNGまたはJPG画像をアップロードしてください。<br>ファイル名は連番（例: image_0001.png, image_0002.png）である必要があります。</p>
       
       <div class="mb-6">
-        <label for="actualImageUpload" id="imageUpload" class="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors duration-200">
-          <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 0115.9 6L16 6a3 3 0 013 3v10a2 2 0 01-2 2H7a2 2 0 01-2-2V7a2 2 0 012-2z"></path></svg>
-          <p class="mb-2 text-sm text-gray-500"><span class="font-semibold">クリック</span> または <span class="font-semibold">ドラッグアンドドロップ</span> してアップロード</p>
-          <p class="text-xs text-gray-500">PNG, JPG, JPEG</p>
+        <label for="actualImageUpload" id="imageUpload" class="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-indigo-300 rounded-lg cursor-pointer bg-indigo-50 hover:bg-indigo-100 transition-colors duration-300 ease-in-out">
+          <svg class="w-10 h-10 text-indigo-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 0115.9 6L16 6a3 3 0 013 3v10a2 2 0 01-2 2H7a2 2 0 01-2-2V7a2 2 0 012-2z"></path></svg>
+          <p class="mb-1 text-sm text-indigo-600"><span class="font-bold">クリック</span> または <span class="font-bold">ドラッグアンドドロップ</span> してアップロード</p>
+          <p class="text-xs text-indigo-500">PNG, JPG, JPEG</p>
           <input type="file" id="actualImageUpload" multiple accept=".png,.jpg,.jpeg" class="hidden" />
         </label>
       </div>
 
-
-      <div id="animation-container" class="border border-gray-300 rounded-lg p-2 mt-4 flex overflow-x-auto whitespace-nowrap min-h-[110px] max-h-[110px] items-start">
+      <div id="animation-container" class="border border-indigo-300 rounded-lg p-2 mt-4 flex overflow-x-auto whitespace-nowrap min-h-[100px] max-h-[100px] items-start bg-white shadow-inner">
       </div>
 
-      <div id="saved-animations-section" class="mt-8 pt-6 border-t border-gray-200">
-        <div class="flex items-center justify-between mb-8">
-          <h2 class="text-2xl font-bold text-gray-800">アニメーション一覧</h2>
-          <p id="storage-usage" class="text-gray-700 text-sm font-bold">読み込み中...</p>
+      <div id="saved-animations-section" class="mt-8 pt-6 border-t border-indigo-200">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-xl font-bold text-indigo-700">アニメーション一覧</h2>
+          <p id="storage-usage" class="text-gray-600 text-sm font-semibold">読み込み中...</p>
         </div>
-        <div id="saved-animations-list" class="space-y-4">
-          <p class="text-gray-600">保存されたアニメーションはありません。</p>
+        <div id="saved-animations-list" class="space-y-3">
+          <p class="text-gray-500 text-sm">保存されたアニメーションはありません。</p>
         </div>
       </div>
     </div>
 
-    <div id="animationNameModal" class="fixed inset-0 bg-gray-600/50 flex items-center justify-center hidden">
-      <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
-        <h3 class="text-xl font-bold mb-4 text-gray-800">アニメーション名を保存</h3>
-        <p class="mb-4 text-gray-700">このアニメーションに名前を付けて保存してください。</p>
-        <input type="text" id="modalAnimationNameInput" placeholder="アニメーション名を入力" class="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+    <div id="animationNameModal" class="fixed inset-0 bg-gray-800/60 flex items-center justify-center hidden p-4">
+      <div class="bg-white p-7 rounded-xl shadow-2xl w-full max-w-sm transform transition-all duration-300 scale-95">
+        <h3 class="text-xl font-bold mb-4 text-indigo-700 text-center">アニメーション名を保存</h3>
+        <p class="mb-5 text-gray-600 text-sm text-center">このアニメーションに名前を付けて保存してください。</p>
+        <input type="text" id="modalAnimationNameInput" placeholder="アニメーション名を入力" class="w-full p-3 border border-indigo-300 rounded-lg mb-5 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-700" />
         <div class="flex justify-end space-x-3">
-          <button id="cancelSaveAnimationBtn" class="px-4 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">キャンセル</button>
-          <button id="confirmSaveAnimationBtn" class="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">保存</button>
+          <button id="cancelSaveAnimationBtn" class="px-5 py-2 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transition-colors duration-200">キャンセル</button>
+          <button id="confirmSaveAnimationBtn" class="px-5 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors duration-200">保存</button>
         </div>
       </div>
     </div>

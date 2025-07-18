@@ -188,14 +188,14 @@ export function handleAnimationModalClick(event: MouseEvent, animationNameModal:
 
 export function createAnimationListItem(name: string, animationSet: AnimationSet, currentActiveAnimationName: string | null, animationContainer: HTMLDivElement, renderAnimationFrames: (frames: string[], container: HTMLDivElement) => void, estimateBase64SizeInBytes: (base64Content: string | null) => number, renderSavedAnimations: (dom: DOMCache) => void): HTMLDivElement {
   const div = document.createElement('div');
-  div.className = 'flex flex-col mb-2.5 w-full';
+  div.className = 'flex flex-col p-3 mb-3 bg-white rounded-lg shadow-sm border border-indigo-100 transition-all duration-200 hover:shadow-md hover:border-indigo-200';
 
   const headerRowDiv = document.createElement('div');
-  headerRowDiv.className = 'flex items-center w-full gap-x-2.5';
+  headerRowDiv.className = 'flex items-center justify-between w-full mb-2';
 
   const animationGroupLabel = document.createElement('label');
   animationGroupLabel.htmlFor = `anim-${name}`;
-  animationGroupLabel.className = 'flex items-center cursor-pointer flex-shrink-0 mr-auto';
+  animationGroupLabel.className = 'flex items-center cursor-pointer flex-grow text-indigo-800';
 
   const input = document.createElement('input');
   input.type = 'radio';
@@ -203,6 +203,7 @@ export function createAnimationListItem(name: string, animationSet: AnimationSet
   input.value = name;
   input.id = `anim-${name}`;
   input.checked = (name === currentActiveAnimationName);
+  input.className = 'form-radio h-4 w-4 text-indigo-600 transition duration-150 ease-in-out';
 
   input.addEventListener('change', (event: Event) => {
     const target = event.target as HTMLInputElement;
@@ -223,11 +224,11 @@ export function createAnimationListItem(name: string, animationSet: AnimationSet
   } else {
     thumbnailImg.src = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
   }
-  thumbnailImg.className = 'w-[35px] h-[35px] object-cover ml-1 mr-2.5 border border-gray-300';
+  thumbnailImg.className = 'w-10 h-10 object-cover ml-1 mr-3 rounded-md border border-gray-200 shadow-sm';
 
   const animationNameSpan = document.createElement('span');
   animationNameSpan.textContent = name;
-  animationNameSpan.className = 'mr-2.5 font-bold';
+  animationNameSpan.className = 'text-base font-semibold text-indigo-700 truncate';
 
   let animationSize: number = 0;
   if (animationSet.frames) {
@@ -245,7 +246,7 @@ export function createAnimationListItem(name: string, animationSet: AnimationSet
   animationGroupLabel.appendChild(animationNameSpan);
 
   const speedControlDiv = document.createElement('div');
-  speedControlDiv.className = 'flex items-center w-1/2 flex-none gap-x-2.5 mr-5'
+  speedControlDiv.className = 'flex items-center flex-shrink-0 ml-4';
   
   const animationSpeedSliderPerItem = document.createElement('input');
   animationSpeedSliderPerItem.type = 'range';
@@ -254,12 +255,12 @@ export function createAnimationListItem(name: string, animationSet: AnimationSet
   animationSpeedSliderPerItem.max = '300';
   animationSpeedSliderPerItem.step = '10';
   animationSpeedSliderPerItem.value = animationSet.interval.toString();
-  animationSpeedSliderPerItem.className = 'h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-lg w-full';
+  animationSpeedSliderPerItem.className = 'w-24 h-2 bg-indigo-200 rounded-lg appearance-none cursor-pointer mr-2';
   speedControlDiv.appendChild(animationSpeedSliderPerItem);
 
   const currentSpeedSpanPerItem = document.createElement('span');
   currentSpeedSpanPerItem.id = `currentSpeed-${name}`;
-  currentSpeedSpanPerItem.className = 'text-gray-700 font-medium';
+  currentSpeedSpanPerItem.className = 'text-sm font-medium text-indigo-600 w-12 text-right';
   currentSpeedSpanPerItem.textContent = `${animationSet.interval}ms`;
   speedControlDiv.appendChild(currentSpeedSpanPerItem);
 
@@ -275,19 +276,18 @@ export function createAnimationListItem(name: string, animationSet: AnimationSet
   });
 
   const sizeSpan = document.createElement('span');
-  sizeSpan.textContent = `Approx. ${animationSizeKB}KB`;
-  sizeSpan.className = 'text-gray-500 text-sm';
+  sizeSpan.textContent = `約 ${animationSizeKB}KB`;
+  sizeSpan.className = 'text-gray-500 text-xs ml-4';
 
   const deleteBtn = document.createElement('button');
   deleteBtn.textContent = '削除';
-  deleteBtn.className = 'px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2';
+  deleteBtn.className = 'ml-4 px-3 py-1 bg-red-500 text-white text-sm font-semibold rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 transition-colors duration-200';
   deleteBtn.addEventListener('click', () => {
     // eslint-disable-next-line no-restricted-globals
-    if (confirm(`アニメーション「${name}を本当に削除しますか？`)) {
+    if (confirm(`アニメーション「${name}」を本当に削除しますか？`)) {
       chrome.runtime.sendMessage({ type: 'deleteAnimation', animationName: name }, (response: { success: boolean }) => {
         if (response && response.success) {
-          // renderSavedAnimations に dom を渡す
-          const currentDom = getDOMReferences(); // 現在のDOM参照を取得
+          const currentDom = getDOMReferences();
           if (currentDom) {
             renderSavedAnimations(currentDom);
           }
